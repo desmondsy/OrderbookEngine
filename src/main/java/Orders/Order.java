@@ -25,4 +25,14 @@ public class Order {
             this.price = price;
         }
     }
+    public Order(Order other, int orderId)
+    {
+        this.timestamp = other.timestamp;
+        this.orderId = orderId;
+        this.securityId = other.securityId;
+        this.side = other.side;
+        this.quantity = other.quantity;
+        this.price = other.price;
+        this.parentLimit = other.parentLimit;
+    }
 }
