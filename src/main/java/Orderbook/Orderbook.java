@@ -1,6 +1,7 @@
 package Orderbook;
 
 import Orders.*;
+import lombok.Getter;
 
 import java.util.HashMap;
 import java.util.TreeSet;
@@ -102,13 +103,13 @@ public class Orderbook {
         return orderMap.containsKey(orderId);
     }
 
-    public double getBestBid()
+    public Limit getBestBidLimit()
     {
-        return bidLimits.last().getLimitPrice();
+        return bidLimits.last();
     }
 
-    public double getBestAsk()
+    public Limit getBestAskLimit()
     {
-        return askLimits.first().getLimitPrice();
+        return askLimits.first();
     }
 }
