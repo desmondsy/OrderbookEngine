@@ -8,7 +8,7 @@ public class Order {
     @Getter private int orderId;
     @Getter private int securityId;
     @Getter private Side side;
-    @Getter private int quantity;
+    @Getter @Setter private int quantity; // setter for quantity matching
     @Getter private double price;
     @Getter private Limit parentLimit;
     @Getter @Setter private Order nextOrder;
