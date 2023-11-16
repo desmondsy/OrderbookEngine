@@ -6,7 +6,7 @@ import Orders.*;
 import java.util.ArrayList;
 import java.util.TreeSet;
 
-public class PriceTimePriorityMatcher implements IOrderMatcher {
+class PriceTimePriorityMatcher implements IOrderMatcher {
     ArrayList<Trade> trades = new ArrayList<>();
 
     @Override
