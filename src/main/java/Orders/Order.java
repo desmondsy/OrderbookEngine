@@ -9,21 +9,27 @@ public class Order {
     @Getter private int securityId;
     @Getter private Side side;
     @Getter @Setter private int quantity; // setter for quantity matching
-    @Getter private double price;
+    @Getter private Double price;
     @Getter private Limit parentLimit;
+    @Getter private ORDER_TYPE ordType = ORDER_TYPE.MARKET;
+    @Getter private boolean isBuy;
+
     @Getter @Setter private Order nextOrder;
     @Getter @Setter private Order prevOrder;
 
-    public Order(long timestamp, int orderId, int securityId, Side side, int quantity, Limit parentLimit, Double price){
+    public Order(long timestamp, int orderId, int securityId, Side side, int quantity, Double price){
         this.timestamp = timestamp;
         this.orderId = orderId;
         this.securityId = securityId;
         this.side = side;
         this.quantity = quantity;
-        this.parentLimit = parentLimit;
-        if (price != null) {
+        if (price != null)
+        {
             this.price = price;
+            this.parentLimit = new Limit(price);
+            this.ordType = ORDER_TYPE.LIMIT;
         }
+        this.isBuy = side == Side.BUY;
     }
     public Order(Order other, int orderId)
     {

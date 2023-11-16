@@ -1,45 +1,69 @@
 package Orderbook;
 
+import MatchingEngine.IOrderMatcher;
 import Orders.*;
 import lombok.Getter;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.TreeSet;
 
 public class Orderbook {
-    private TreeSet<AskLimit> askLimits = new TreeSet<>();
-    private TreeSet<BidLimit> bidLimits = new TreeSet<>();
+    @Getter private TreeSet<Limit> askLimits = new TreeSet<>(new AskLimitComparator());
+    @Getter private TreeSet<Limit> bidLimits = new TreeSet<>(new BidLimitComparator());
     private HashMap<Integer, Order> orderMap = new HashMap<>();
+    @Getter private IOrderMatcher matchingEngine;
     private int nextAvailableOrderId;
+    @Getter private double bestBid = Integer.MIN_VALUE;
+    @Getter private double bestAsk = Integer.MAX_VALUE;
+    @Getter private int totalAskSize = 0;
+    @Getter private int totalBidSize = 0;
 
-    public <T extends Limit> void addOrder(Order incomingOrder, Limit limit, TreeSet<T> limitTree, HashMap<Integer, Order> map)
+    public Orderbook(IOrderMatcher matchingEngine)
     {
-        // TODO: something not quite right with limit class and generic definition
-        if (limitTree.contains(limit))
+        this.matchingEngine = matchingEngine;
+    }
+
+    public void addOrder(Order incomingOrder)
+    {
+        if (orderMap.containsKey(incomingOrder.getOrderId()))
+            throw new RuntimeException("orderMap already contains this orderId.");
+
+        addOrder(incomingOrder, incomingOrder.getParentLimit(), incomingOrder.isBuy() ? bidLimits : askLimits);
+    }
+
+    private void addOrder(Order incomingOrder, Limit limit, TreeSet<Limit> limitTree)
+    {
+        // if market order - matchingEngine.matchMarketOrder()
+        // if aggressive limit order - matchingEngine.matchAggressiveLimitOrder()
+
+        Limit existingLimit = treeSetTryGetValue(limitTree, limit); // log(n) search (balanced BST). This is basically the .contains method but we also extract the element.
+        if (existingLimit != null)
         {
-            if (limit.getHead() == null) // limit level exists but no orders in it
+            if (existingLimit.getHead() == null) // limit level exists but no orders in it
             {
-                limit.setHead(incomingOrder);
-                limit.setTail(incomingOrder);
+                existingLimit.setHead(incomingOrder);
+                existingLimit.setTail(incomingOrder);
             }
             else
             {
                 // doubly linked list insertion
-                incomingOrder.setPrevOrder(limit.getTail()); // current head of limit is the most recent order in the limit
-                limit.getTail().setNextOrder(incomingOrder); // set the next pointer of current limit head to the incoming order
-                limit.setTail(incomingOrder);
+                incomingOrder.setPrevOrder(existingLimit.getTail()); // current head of limit is the most recent order in the limit
+                existingLimit.getTail().setNextOrder(incomingOrder); // set the next pointer of current limit head to the incoming order
+                existingLimit.setTail(incomingOrder);
                 incomingOrder.setNextOrder(null);
             }
         }
         else
         {
-            limitTree.add(limit); // TODO: bug
+            limitTree.add(limit);
             limit.setHead(incomingOrder);
             limit.setTail(incomingOrder);
         }
 
-        map.put(incomingOrder.getOrderId(), incomingOrder);
+        orderMap.put(incomingOrder.getOrderId(), incomingOrder);
         nextAvailableOrderId = incomingOrder.getOrderId() + 1; // TODO: not sure about this
+        updateBookStateAfterAdd(incomingOrder);
     }
 
     public void removeOrder(int removeOrderId)
@@ -77,7 +101,11 @@ public class Orderbook {
             {
                 orderToRemove.getPrevOrder().setNextOrder(orderToRemove.getNextOrder());
             }
+
+            // cleanup limit from tree if we just removed the only order in the limit level
+            removeLimitFromTreeIfEmpty(orderToRemove.getParentLimit(), orderToRemove.isBuy());
             orderMap.remove(removeOrderId);
+            updateBookStateAfterRemove(orderToRemove);
         }
     }
 
@@ -91,10 +119,7 @@ public class Orderbook {
             Order newOrder = new Order(modOrder, nextAvailableOrderId);
 
             // in the event of a price mod, the Limit pointer of the modOrder should reflect the new Limit
-            if (newOrder.getParentLimit().getLimitSide() == Side.BUY)
-                addOrder(newOrder, newOrder.getParentLimit(), bidLimits, orderMap);
-            else
-                addOrder(newOrder, newOrder.getParentLimit(), askLimits, orderMap);
+            addOrder(newOrder);
         }
     }
 
@@ -103,13 +128,93 @@ public class Orderbook {
         return orderMap.containsKey(orderId);
     }
 
-    public Limit getBestBidLimit()
+
+    private void updateBestBid(double price)
     {
-        return bidLimits.last();
+        if (price > bestBid)
+        {
+            bestBid = price;
+        }
     }
 
-    public Limit getBestAskLimit()
+    private void updateBestAsk(double price)
     {
-        return askLimits.first();
+        if (price < bestAsk)
+        {
+            bestAsk = price;
+        }
+    }
+
+    private void removeLimitFromTreeIfEmpty(Limit l, boolean isBuy)
+    {
+        if (l.isEmpty())
+        {
+            if (isBuy)
+            {
+                bidLimits.remove(l);
+                if (l.getPrice() == bestBid)
+                {
+                    Iterator<Limit> it = bidLimits.iterator();
+                    if (it.hasNext())
+                    {
+                        bestBid = it.next().getPrice();
+                    }
+                    else
+                    {
+                        // TODO: some warning
+                    }
+                }
+            }
+            else
+            {
+                askLimits.remove(l);
+                if (l.getPrice() == bestAsk)
+                {
+                    Iterator<Limit> it = askLimits.iterator();
+                    if (it.hasNext())
+                    {
+                        bestAsk = it.next().getPrice();
+                    }
+                    else
+                    {
+                        // TODO: some warning
+                    }
+                }
+            }
+        }
+    }
+
+    private void updateBookStateAfterAdd(Order o)
+    {
+        if (o.isBuy())
+        {
+            totalBidSize += o.getQuantity();
+            updateBestBid(o.getPrice());
+        }
+        else
+        {
+            totalAskSize += o.getQuantity();
+            updateBestAsk(o.getPrice());
+        }
+    }
+
+    private void updateBookStateAfterRemove(Order o)
+    {
+        if (o.isBuy())
+        {
+            totalBidSize -= o.getQuantity();
+        }
+        else
+        {
+            totalAskSize -= o.getQuantity();
+        }
+    }
+
+    private static <T> T treeSetTryGetValue(TreeSet<T> set, T key) {
+        T floor = set.floor(key);
+        if (floor != null && floor.equals(key)) {
+            return floor;
+        }
+        return null;
     }
 }

@@ -1,62 +1,70 @@
 package MatchingEngine;
 
 import Orderbook.Orderbook;
-import Orders.Limit;
-import Orders.Order;
-import Orders.Trade;
+import Orders.*;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.TreeSet;
 
 public class PriceTimePriorityMatcher implements IOrderMatcher {
-    @Override
-    public List<Trade> matchLimitBuy(Order o, Orderbook ob) {
-        Limit bestAskLimit = ob.getBestAskLimit();
-        Order ptr = bestAskLimit.getHead();
-        List<Trade> trades = new ArrayList<>();
+    ArrayList<Trade> trades = new ArrayList<>();
 
-        if (o.getPrice() >= bestAskLimit.getLimitPrice())
+    @Override
+    public void matchMarketOrder(Order o, Orderbook ob)
+    {
+        int totalSize = o.isBuy() ? ob.getTotalAskSize() : ob.getTotalBidSize();
+        if (o.getQuantity() >= totalSize)
         {
-            // traverse through the orders best ask limit level
-            while (ptr != null)
+            // if e.g. total ask size is 10000, but an aggressive buy order comes in for 20000, we aren't going to match it.
+            return;
+        }
+
+        TreeSet<Limit> limitTree = o.isBuy() ? ob.getAskLimits() : ob.getBidLimits();
+
+        for (Limit limit: limitTree)
+        {
+            Order ptr = limit.getHead();
+
+            // only iterate limit levels that have at least one order in it.
+            // e.g. if we are 100/101 and then we deplete 101 with a market order, the 101 limit is technically still here
+            // but will be null (ptr = null). So we don't do any matching on that null level
+            while(ptr!=null)
             {
                 if (o.getQuantity() >= ptr.getQuantity())
                 {
-                    trades.add(new Trade(o.getPrice(), o.getQuantity(), ptr.getOrderId(), o.getOrderId()));
+                    trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), o.getQuantity(), ptr.getOrderId(), o.getOrderId()));
                     o.setQuantity(o.getQuantity() - ptr.getQuantity());
                     ob.removeOrder(ptr.getOrderId());
                     ptr = ptr.getNextOrder();
                 }
                 else
                 {
-                    trades.add(new Trade(ptr.getPrice(), ptr.getQuantity(), ptr.getOrderId(), o.getOrderId()));
+                    trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), ptr.getQuantity(), ptr.getOrderId(), o.getOrderId()));
                     o.setQuantity(o.getQuantity() - ptr.getQuantity());
                     ob.removeOrder(ptr.getOrderId());
-                    if (o.getQuantity() == 0)
+                    if (o.getQuantity() <= 0)
                     {
-                        return trades;
+                        break;
                     }
                 }
             }
-            // ptr is null (the limit is depleted, hence add the remainder quantity at far touch)
-            bestAskLimit.setHead(o);
-            bestAskLimit.setTail(o);
+
+            // if we reach here, we have depleted the current limit level. E.g order for 1000 but best ask is < 1000.
+            // We continue as is to the next level, should be no issues.
+
         }
-        return trades;
+
+        if (o.getQuantity() > 0)
+        {
+            // ideally there should be no order quantity remaining after going through ALL the limit levels
+            // the initial total size condition should prevent us from reaching this block.
+            // raise exception if we somehow reach here.
+        }
     }
 
     @Override
-    public List<Trade> matchLimitSell(Order o, Orderbook ob) {
-        return null;
-    }
+    public void matchAggressiveLimitOrder(Order o, Orderbook ob)
+    {
 
-    @Override
-    public List<Trade> matchMarketBuy(Order o, Orderbook ob) {
-        return null;
-    }
-
-    @Override
-    public List<Trade> matchMarketSell(Order o, Orderbook ob) {
-        return null;
     }
 }
