@@ -9,7 +9,7 @@ public class Limit {
     @Getter private double price;
     @Getter @Setter private Order head = null;
     @Getter @Setter private Order tail = null;
-    @Getter private int totalVolumeAtLimit;
+    @Getter @Setter private int totalVolumeAtLimit = 0;
 
     public Limit(double price) {
         // Each passive order points to a limit price. We need to create the limit if it doesnt yet exist in the orderbook.

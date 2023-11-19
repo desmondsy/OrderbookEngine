@@ -11,7 +11,7 @@ import java.util.TreeSet;
 public class Orderbook {
     @Getter private TreeSet<Limit> askLimits = new TreeSet<>(new AskLimitComparator());
     @Getter private TreeSet<Limit> bidLimits = new TreeSet<>(new BidLimitComparator());
-    private HashMap<Integer, Order> orderMap = new HashMap<>();
+    @Getter private HashMap<Integer, Order> orderMap = new HashMap<>();
     @Getter private IOrderMatcher matchingEngine;
     private int nextAvailableOrderId;
     @Getter private double bestBid = Integer.MIN_VALUE;
@@ -26,6 +26,10 @@ public class Orderbook {
 
     public void addOrder(Order incomingOrder)
     {
+        //set order id and timestamp
+        incomingOrder.setOrderId(nextAvailableOrderId);
+        incomingOrder.setTimestamp(System.nanoTime());
+
         if (orderMap.containsKey(incomingOrder.getOrderId()))
             throw new RuntimeException("orderMap already contains this orderId.");
 
@@ -34,12 +38,26 @@ public class Orderbook {
 
     private void addOrder(Order incomingOrder, Limit limit, TreeSet<Limit> limitTree)
     {
-        // if market order - matchingEngine.matchMarketOrder()
-        // if aggressive limit order - matchingEngine.matchAggressiveLimitOrder()
+        // market order
+        if (incomingOrder.getOrdType() == ORDER_TYPE.MARKET)
+        {
+            matchingEngine.matchMarketOrder(incomingOrder, this);
+            return;
+        }
 
+        // aggressive limit order
+        if ((incomingOrder.isBuy() && incomingOrder.getPrice() >= bestAsk) ||
+                (!incomingOrder.isBuy() && incomingOrder.getPrice() <= bestBid))
+        {
+            matchingEngine.matchAggressiveLimitOrder(incomingOrder, this);
+            return;
+        }
+
+        // passive order
         Limit existingLimit = treeSetTryGetValue(limitTree, limit); // log(n) search (balanced BST). This is basically the .contains method but we also extract the element.
         if (existingLimit != null)
         {
+            incomingOrder.setParentLimit(existingLimit); // orders at the same limit level must reference the same limit level object
             if (existingLimit.getHead() == null) // limit level exists but no orders in it
             {
                 existingLimit.setHead(incomingOrder);
@@ -53,12 +71,14 @@ public class Orderbook {
                 existingLimit.setTail(incomingOrder);
                 incomingOrder.setNextOrder(null);
             }
+            existingLimit.setTotalVolumeAtLimit(existingLimit.getTotalVolumeAtLimit() + incomingOrder.getQuantity());
         }
         else
         {
             limitTree.add(limit);
             limit.setHead(incomingOrder);
             limit.setTail(incomingOrder);
+            limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() + incomingOrder.getQuantity());
         }
 
         orderMap.put(incomingOrder.getOrderId(), incomingOrder);
@@ -109,14 +129,28 @@ public class Orderbook {
         }
     }
 
-    public void modifyOrder(Order modOrder)
+    public void modifyOrderPrice(int orderId, double price)
     {
-        if (containsOrder(modOrder.getOrderId()))
+        if (containsOrder(orderId))
         {
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
-            removeOrder(modOrder.getOrderId());
-            Order newOrder = new Order(modOrder, nextAvailableOrderId);
+            Order newOrder = new Order(orderMap.get(orderId), price);
+            removeOrder(orderId);
+
+            // in the event of a price mod, the Limit pointer of the modOrder should reflect the new Limit
+            addOrder(newOrder);
+        }
+    }
+
+    public void modifyOrderQty(int orderId, int qty)
+    {
+        if (containsOrder(orderId))
+        {
+            // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
+            // insertion use the same deleted orderId? or does it use the next id available? probably latter
+            Order newOrder = new Order(orderMap.get(orderId), qty);
+            removeOrder(orderId);
 
             // in the event of a price mod, the Limit pointer of the modOrder should reflect the new Limit
             addOrder(newOrder);
@@ -207,6 +241,13 @@ public class Orderbook {
         else
         {
             totalAskSize -= o.getQuantity();
+        }
+
+        // if the limit still exists, we update the volume at limit by sutracting the qty of the removed order
+        if (!o.getParentLimit().isEmpty())
+        {
+            int newTotalLimitVolume = o.getParentLimit().getTotalVolumeAtLimit() - o.getQuantity();
+            o.getParentLimit().setTotalVolumeAtLimit(newTotalLimitVolume);
         }
     }
 
