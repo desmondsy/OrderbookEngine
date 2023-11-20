@@ -12,7 +12,7 @@ public class Orderbook {
     @Getter private TreeSet<Limit> askLimits = new TreeSet<>(new AskLimitComparator());
     @Getter private TreeSet<Limit> bidLimits = new TreeSet<>(new BidLimitComparator());
     @Getter private HashMap<Integer, Order> orderMap = new HashMap<>();
-    @Getter private IOrderMatcher matchingEngine;
+    private IOrderMatcher matchingEngine;
     private int nextAvailableOrderId;
     @Getter private double bestBid = Integer.MIN_VALUE;
     @Getter private double bestAsk = Integer.MAX_VALUE;
@@ -257,5 +257,34 @@ public class Orderbook {
             return floor;
         }
         return null;
+    }
+
+    public void printOrderbook()
+    {
+        System.out.println("BID LIMITS");
+        for (Limit limit: bidLimits)
+        {
+            System.out.println(limit);
+            Order ptr = limit.getHead();
+            while (ptr != null)
+            {
+                System.out.println(ptr);
+                ptr = ptr.getNextOrder();
+            }
+        }
+
+        System.out.println("ASK LIMITS");
+        for (Limit limit: askLimits)
+        {
+            System.out.println(limit);
+            Order ptr = limit.getHead();
+            while (ptr != null)
+            {
+                System.out.println(ptr);
+                ptr = ptr.getNextOrder();
+            }
+        }
+
+        System.out.println("\n####\n");
     }
 }

@@ -11,35 +11,6 @@ import java.util.List;
 public class OrderbookTest {
     Orderbook ob = new Orderbook(OrderMatcherFactory.createOrderMatcher("pricetime"));
 
-    public void printOrderbook()
-    {
-        System.out.println("BID LIMITS");
-        for (Limit limit: ob.getBidLimits())
-        {
-            System.out.println(limit);
-            Order ptr = limit.getHead();
-            while (ptr != null)
-            {
-                System.out.println(ptr);
-                ptr = ptr.getNextOrder();
-            }
-        }
-
-        System.out.println("ASK LIMITS");
-        for (Limit limit: ob.getAskLimits())
-        {
-            System.out.println(limit);
-            Order ptr = limit.getHead();
-            while (ptr != null)
-            {
-                System.out.println(ptr);
-                ptr = ptr.getNextOrder();
-            }
-        }
-
-        System.out.println("\n####\n");
-    }
-
     @Test
     public void testAddRemoveModifyOrders()
     {
@@ -51,7 +22,7 @@ public class OrderbookTest {
             ob.addOrder(o);
         }
 
-        printOrderbook();
+        ob.printOrderbook();
 
         // asserts here
         Assertions.assertEquals(ob.getTotalBidSize(), 4200);
@@ -84,7 +55,7 @@ public class OrderbookTest {
         Assertions.assertEquals(ob.getOrderMap().get(10).getParentLimit().getTotalVolumeAtLimit(), 2600);
         Assertions.assertEquals(ob.getTotalAskSize(), 3600);
 
-        printOrderbook();
+        ob.printOrderbook();
 
         System.out.println("--------------------MODIFYING--------------------");
 
@@ -95,6 +66,6 @@ public class OrderbookTest {
         // remove
         ob.removeOrder(16);
 
-        printOrderbook();
+        ob.printOrderbook();
     }
 }
