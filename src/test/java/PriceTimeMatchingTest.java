@@ -1,5 +1,6 @@
 import MatchingEngine.OrderMatcherFactory;
 import Orderbook.Orderbook;
+import Orders.Limit;
 import Orders.Order;
 import Orders.Side;
 import org.junit.jupiter.api.Assertions;
@@ -33,7 +34,13 @@ public class PriceTimeMatchingTest {
 
         ob.printOrderbook();
 
-        Assertions.assertEquals(ob.getOrderMap().get(18).getQuantity(), 50);
+        Assertions.assertFalse(ob.getAskLimits().contains(new Limit(11)));
+        Assertions.assertEquals(ob.getOrderMap().get(18).getCurrentQuantity(), 50);
+        Assertions.assertEquals(ob.getOrderMap().get(18).getParentLimit().getTotalVolumeAtLimit(), 450);
+        Assertions.assertEquals(ob.getTotalAskSize(), 950);
+        Assertions.assertEquals(ob.getBestAsk(), 12);
+        Assertions.assertEquals(ob.getBestBid(), 10);
+        Assertions.assertTrue(ob.compareTotalBidAskVolumes());
     }
 
     @Test
@@ -46,7 +53,13 @@ public class PriceTimeMatchingTest {
 
         ob.printOrderbook();
 
-        Assertions.assertEquals(ob.getOrderMap().get(18).getQuantity(), 100);
+        Assertions.assertFalse(ob.getAskLimits().contains(new Limit(10)));
+        Assertions.assertFalse(ob.getAskLimits().contains(new Limit(9)));
+        Assertions.assertEquals(ob.getOrderMap().get(13).getParentLimit().getTotalVolumeAtLimit(), 1100);
+        Assertions.assertEquals(ob.getOrderMap().get(13).getCurrentQuantity(), 100);
+        Assertions.assertEquals(ob.getBestAsk(), 11);
+        Assertions.assertEquals(ob.getBestBid(), 7);
+        Assertions.assertTrue(ob.compareTotalBidAskVolumes());
     }
 
     @Test
@@ -58,6 +71,7 @@ public class PriceTimeMatchingTest {
         ob.addOrder(new Order(0, Side.BUY, 350, 11d));
 
         ob.printOrderbook();
+        Assertions.assertTrue(ob.compareTotalBidAskVolumes());
     }
 
     @Test
@@ -69,5 +83,11 @@ public class PriceTimeMatchingTest {
         ob.addOrder(new Order(0, Side.BUY, 3300, 11d));
 
         ob.printOrderbook();
+
+        Assertions.assertEquals(ob.getBestAsk(), 12);
+        Assertions.assertEquals(ob.getBestBid(), 11);
+        Assertions.assertFalse(ob.getAskLimits().contains(new Limit(11)));
+        Assertions.assertTrue(ob.getAskLimits().contains(new Limit(12)));
+        Assertions.assertTrue(ob.compareTotalBidAskVolumes());
     }
 }
