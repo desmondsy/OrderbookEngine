@@ -1,7 +1,7 @@
 package MatchingEngine;
 
 public class OrderMatcherFactory {
-    public static IOrderMatcher createOrderMatcher(String matcher)
+    public static AbstractOrderMatcher createOrderMatcher(String matcher)
     {
         if (matcher.equals("pricetime"))
             return new PriceTimePriorityMatcher();
