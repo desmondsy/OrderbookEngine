@@ -1,25 +1,28 @@
 package Orderbook;
 
+import MatchingEngine.AbstractOrderMatcher;
 import MatchingEngine.IOrderMatcher;
 import Orders.*;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TreeSet;
 
 public class Orderbook {
     @Getter private TreeSet<Limit> askLimits = new TreeSet<>(new AskLimitComparator());
     @Getter private TreeSet<Limit> bidLimits = new TreeSet<>(new BidLimitComparator());
     @Getter private HashMap<Integer, Order> orderMap = new HashMap<>();
-    private IOrderMatcher matchingEngine;
+    @Getter private AbstractOrderMatcher matchingEngine;
     private int nextAvailableOrderId;
     @Getter private double bestBid = Integer.MIN_VALUE;
     @Getter private double bestAsk = Integer.MAX_VALUE;
-    @Getter private int totalAskSize = 0;
-    @Getter private int totalBidSize = 0;
+    @Getter @Setter private int totalAskSize = 0;
+    @Getter @Setter private int totalBidSize = 0;
 
-    public Orderbook(IOrderMatcher matchingEngine)
+    public Orderbook(AbstractOrderMatcher matchingEngine)
     {
         this.matchingEngine = matchingEngine;
     }
@@ -38,6 +41,8 @@ public class Orderbook {
 
     private void addOrder(Order incomingOrder, Limit limit, TreeSet<Limit> limitTree)
     {
+        // market orders and aggressive limit orders do NOT need to be put in the orderMap.
+
         // market order
         if (incomingOrder.getOrdType() == ORDER_TYPE.MARKET)
         {
@@ -71,14 +76,14 @@ public class Orderbook {
                 existingLimit.setTail(incomingOrder);
                 incomingOrder.setNextOrder(null);
             }
-            existingLimit.setTotalVolumeAtLimit(existingLimit.getTotalVolumeAtLimit() + incomingOrder.getQuantity());
+            existingLimit.setTotalVolumeAtLimit(existingLimit.getTotalVolumeAtLimit() + incomingOrder.getInitialQuantity());
         }
         else
         {
             limitTree.add(limit);
             limit.setHead(incomingOrder);
             limit.setTail(incomingOrder);
-            limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() + incomingOrder.getQuantity());
+            limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() + incomingOrder.getInitialQuantity());
         }
 
         orderMap.put(incomingOrder.getOrderId(), incomingOrder);
@@ -222,12 +227,12 @@ public class Orderbook {
     {
         if (o.isBuy())
         {
-            totalBidSize += o.getQuantity();
+            totalBidSize += o.getInitialQuantity();
             updateBestBid(o.getPrice());
         }
         else
         {
-            totalAskSize += o.getQuantity();
+            totalAskSize += o.getInitialQuantity();
             updateBestAsk(o.getPrice());
         }
     }
@@ -236,17 +241,17 @@ public class Orderbook {
     {
         if (o.isBuy())
         {
-            totalBidSize -= o.getQuantity();
+            totalBidSize -= o.getCurrentQuantity();
         }
         else
         {
-            totalAskSize -= o.getQuantity();
+            totalAskSize -= o.getCurrentQuantity();
         }
 
         // if the limit still exists, we update the volume at limit by sutracting the qty of the removed order
         if (!o.getParentLimit().isEmpty())
         {
-            int newTotalLimitVolume = o.getParentLimit().getTotalVolumeAtLimit() - o.getQuantity();
+            int newTotalLimitVolume = o.getParentLimit().getTotalVolumeAtLimit() - o.getCurrentQuantity();
             o.getParentLimit().setTotalVolumeAtLimit(newTotalLimitVolume);
         }
     }
@@ -264,7 +269,7 @@ public class Orderbook {
         System.out.println("BID LIMITS");
         for (Limit limit: bidLimits)
         {
-            System.out.println(limit);
+            System.out.println(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
             Order ptr = limit.getHead();
             while (ptr != null)
             {
@@ -276,7 +281,7 @@ public class Orderbook {
         System.out.println("ASK LIMITS");
         for (Limit limit: askLimits)
         {
-            System.out.println(limit);
+            System.out.println(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
             Order ptr = limit.getHead();
             while (ptr != null)
             {
@@ -286,5 +291,45 @@ public class Orderbook {
         }
 
         System.out.println("\n####\n");
+    }
+
+    public boolean compareTotalBidAskVolumes()
+    {
+        int askSideTotalVolume = 0;
+        int bidSideTotalVolume = 0;
+
+        for (Limit limit: askLimits)
+        {
+            Order ord = limit.getHead();
+            int currentLimitTotalQty = 0;
+            while (ord != null)
+            {
+                currentLimitTotalQty += ord.getCurrentQuantity();
+                ord = ord.getNextOrder();
+            }
+
+            if (currentLimitTotalQty != limit.getTotalVolumeAtLimit())
+                return false;
+
+            askSideTotalVolume += limit.getTotalVolumeAtLimit();
+        }
+
+        for (Limit limit: bidLimits)
+        {
+            Order ord = limit.getHead();
+            int currentLimitTotalQty = 0;
+            while (ord != null)
+            {
+                currentLimitTotalQty += ord.getCurrentQuantity();
+                ord = ord.getNextOrder();
+            }
+
+            if (currentLimitTotalQty != limit.getTotalVolumeAtLimit())
+                return false;
+
+            bidSideTotalVolume += limit.getTotalVolumeAtLimit();
+        }
+
+        return askSideTotalVolume == totalAskSize && bidSideTotalVolume == totalBidSize;
     }
 }

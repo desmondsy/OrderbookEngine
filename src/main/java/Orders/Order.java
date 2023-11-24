@@ -3,24 +3,27 @@ package Orders;
 import lombok.Getter;
 import lombok.Setter;
 
+@Getter
 public class Order {
-    @Getter @Setter private long timestamp;
-    @Getter @Setter private int orderId;
-    @Getter private int securityId;
-    @Getter private Side side;
-    @Getter @Setter private int quantity; // setter for quantity matching
-    @Getter private Double price;
-    @Getter @Setter private Limit parentLimit;
-    @Getter private ORDER_TYPE ordType = ORDER_TYPE.MARKET;
-    @Getter private boolean isBuy;
+    @Setter private long timestamp;
+    @Setter private int orderId;
+    private int securityId;
+    private Side side;
+    @Setter private int initialQuantity;
+    @Setter private int currentQuantity;
+    private Double price;
+    @Setter private Limit parentLimit;
+    private ORDER_TYPE ordType = ORDER_TYPE.MARKET;
+    private boolean isBuy;
 
-    @Getter @Setter private Order nextOrder;
-    @Getter @Setter private Order prevOrder;
+    @Setter private Order nextOrder;
+    @Setter private Order prevOrder;
 
     public Order(int securityId, Side side, int quantity, Double price){
         this.securityId = securityId;
         this.side = side;
-        this.quantity = quantity;
+        this.initialQuantity = quantity;
+        this.currentQuantity = quantity;
         if (price != null)
         {
             this.price = price;
@@ -34,7 +37,8 @@ public class Order {
         this.securityId = other.securityId;
         this.side = other.side;
         this.isBuy = other.isBuy;
-        this.quantity = other.quantity;
+        this.initialQuantity = other.currentQuantity;
+        this.currentQuantity = other.currentQuantity;
         this.price = price;
         this.parentLimit = new Limit(price);
         this.ordType = ORDER_TYPE.LIMIT;
@@ -45,7 +49,8 @@ public class Order {
         this.securityId = other.securityId;
         this.side = other.side;
         this.isBuy = other.isBuy;
-        this.quantity = quantity;
+        this.initialQuantity = quantity;
+        this.currentQuantity = quantity;
         this.price = other.price;
         this.parentLimit = other.parentLimit;
         this.ordType = ORDER_TYPE.LIMIT;
@@ -53,6 +58,6 @@ public class Order {
 
     @Override
     public String toString() {
-        return "Order(orderId=" + orderId + ", timestamp=" + timestamp + ", price=" + price + ", qty=" + quantity + ", nextOrder=" + nextOrder + ")";
+        return "Order(orderId=" + orderId + ", timestamp=" + timestamp + ", price=" + price + ", initialQty=" + initialQuantity + ", currentQty=" + currentQuantity + ", nextOrder=" + nextOrder + ")";
     }
 }
