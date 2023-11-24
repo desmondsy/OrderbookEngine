@@ -7,14 +7,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 
-class PriceTimePriorityMatcher implements IOrderMatcher {
-    ArrayList<Trade> trades = new ArrayList<>();
-
+class PriceTimePriorityMatcher extends AbstractOrderMatcher {
     @Override
     public void matchMarketOrder(Order o, Orderbook ob)
     {
         int totalSize = o.isBuy() ? ob.getTotalAskSize() : ob.getTotalBidSize();
-        if (o.getQuantity() >= totalSize)
+        if (o.getInitialQuantity() >= totalSize)
         {
             // if e.g. total ask size is 10000, but an aggressive buy order comes in for 20000, we aren't going to match it.
             return;
@@ -32,39 +30,43 @@ class PriceTimePriorityMatcher implements IOrderMatcher {
             // but will be null (ptr = null). So we don't do any matching on that null level
 
             // whilst there are still orders to be matched in the current limit level AND market order still has excess unmatched qty
-            while(ptr!=null && o.getQuantity() > 0)
+            while(ptr!=null && o.getCurrentQuantity() > 0)
             {
-                if (o.getQuantity() >= ptr.getQuantity())
+                if (o.getCurrentQuantity() >= ptr.getCurrentQuantity())
                 {
                     // we are able to fill an entire resting order with possible excess, so we keep going
-                    trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), ptr.getQuantity(), ptr.getOrderId(), o.getOrderId()));
-                    o.setQuantity(o.getQuantity() - ptr.getQuantity());
-                    ordersToRemove.add(ptr.getOrderId());
+                    trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), ptr.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId()));
+                    o.setCurrentQuantity(o.getCurrentQuantity() - ptr.getCurrentQuantity());
+                    ordersToRemove.add(ptr.getOrderId()); // resting orders are fully matched
                     ptr = ptr.getNextOrder();
                 }
                 else
                 {
-                    trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), o.getQuantity(), ptr.getOrderId(), o.getOrderId()));
-                    ptr.setQuantity(ptr.getQuantity() - o.getQuantity());
-                    o.setQuantity(0); // market order is fully matched, we can remove the order and exit the while loop
-                    ordersToRemove.add(o.getOrderId());
-                    if (ptr.getQuantity() == 0)
-                        ordersToRemove.add(ptr.getOrderId());
+                    trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), o.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId()));
+                    int remainingQtyToFill = o.getCurrentQuantity();
+                    limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - remainingQtyToFill);
+                    if (o.isBuy())
+                        ob.setTotalAskSize(ob.getTotalAskSize() - remainingQtyToFill);
+                    else
+                        ob.setTotalBidSize(ob.getTotalBidSize() - remainingQtyToFill);
+                    ptr.setCurrentQuantity(ptr.getInitialQuantity() - remainingQtyToFill);
+                    o.setCurrentQuantity(0); // market order is fully matched, we can exit the while loop
                 }
             }
 
-            // if we reach here, we have depleted the current limit level. If the market order still has remaining unmatched quantity,
-            // we need to continue to the next best limit.
-            if (o.getQuantity() == 0)
+            // if we reach here, we have either depleted the current limit level OR the market order has been completely filled.
+            // If the market order still has remaining unmatched quantity, we need to continue to the next best limit.
+            if (o.getCurrentQuantity() == 0)
                 break;
 
         }
 
-        if (o.getQuantity() > 0)
+        if (o.getCurrentQuantity() > 0)
         {
             // ideally there should be no order quantity remaining after going through ALL the limit levels
             // the initial total size condition should prevent us from reaching this block.
             // raise exception if we somehow reach here.
+            throw new UnexpectedRemainingVolumeException("There shouldn't be any remaining quantity here.");
         }
 
         /*
@@ -85,7 +87,7 @@ class PriceTimePriorityMatcher implements IOrderMatcher {
     {
         // logic is similar to matching a market order
         int totalSize = o.isBuy() ? ob.getTotalAskSize() : ob.getTotalBidSize();
-        if (o.getQuantity() >= totalSize)
+        if (o.getInitialQuantity() >= totalSize)
         {
             // if e.g. total ask size is 10000, but an aggressive buy order comes in for 20000, we aren't going to match it.
             return;
@@ -101,23 +103,26 @@ class PriceTimePriorityMatcher implements IOrderMatcher {
             {
                 Order ptr = limit.getHead();
 
-                while(ptr!=null && o.getQuantity() > 0)
+                while(ptr!=null && o.getCurrentQuantity() > 0)
                 {
-                    if (o.getQuantity() >= ptr.getQuantity())
+                    if (o.getCurrentQuantity() >= ptr.getCurrentQuantity())
                     {
-                        trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), ptr.getQuantity(), ptr.getOrderId(), o.getOrderId()));
-                        o.setQuantity(o.getQuantity() - ptr.getQuantity());
-                        ordersToRemove.add(ptr.getOrderId());
+                        trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), ptr.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId()));
+                        o.setCurrentQuantity(o.getCurrentQuantity() - ptr.getCurrentQuantity());
+                        ordersToRemove.add(ptr.getOrderId()); // resting orders are fully matched
                         ptr = ptr.getNextOrder();
                     }
                     else
                     {
-                        trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), o.getQuantity(), ptr.getOrderId(), o.getOrderId()));
-                        ptr.setQuantity(ptr.getQuantity() - o.getQuantity());
-                        o.setQuantity(0); // order is fully matched, we can remove the order and exit the while loop
-                        ordersToRemove.add(o.getOrderId());
-                        if (ptr.getQuantity() == 0)
-                            ordersToRemove.add(ptr.getOrderId());
+                        trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), o.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId()));
+                        int remainingQtyToFill = o.getCurrentQuantity();
+                        limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - remainingQtyToFill);
+                        if (o.isBuy())
+                            ob.setTotalAskSize(ob.getTotalAskSize() - remainingQtyToFill);
+                        else
+                            ob.setTotalBidSize(ob.getTotalBidSize() - remainingQtyToFill);
+                        ptr.setCurrentQuantity(ptr.getCurrentQuantity() - remainingQtyToFill);
+                        o.setCurrentQuantity(0); // order is fully matched, we can exit the while loop
                     }
                 }
             }
@@ -132,8 +137,8 @@ class PriceTimePriorityMatcher implements IOrderMatcher {
 
         // e.g. if we do an aggressive limit buy 500 qty on a book like 500 x 100/101 x 200, any remaining qty
         // will be made into a passive buy at 101. we don't clear anything beyond the top level.
-        if (o.getQuantity() > 0)
-            ob.addOrder(new Order(o.getSecurityId(), o.getSide(), o.getQuantity(), farTouchPrice));
+        if (o.getCurrentQuantity() > 0)
+            ob.addOrder(new Order(o.getSecurityId(), o.getSide(), o.getCurrentQuantity(), farTouchPrice));
 
     }
 }
