@@ -2,7 +2,6 @@ import MatchingEngine.OrderMatcherFactory;
 import Orderbook.Orderbook;
 import Orders.Limit;
 import Orders.Order;
-import Orders.Side;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +13,7 @@ public class OrderbookTest {
     @Test
     public void testAddRemoveModifyOrders()
     {
-        List<Order> orderList = OrderGeneratorTest.readOrdersFromFile("MultipleLimits.txt");
+        List<Order> orderList = OrderGeneratorTest.readOrdersFromFile("data/MultipleLimits.txt");
         System.out.println("--------------------ADDING--------------------");
 
         for (Order o: orderList)
@@ -35,25 +34,25 @@ public class OrderbookTest {
 
         // remove
         System.out.println("--------------------REMOVING--------------------");
-        ob.removeOrder(14);
+        ob.removeOrder(14, false);
         Assertions.assertFalse(ob.getBidLimits().contains(new Limit(6)));
         Assertions.assertEquals(ob.getTotalBidSize(), 3900);
         Assertions.assertTrue(ob.compareTotalBidAskVolumes());
 
-        ob.removeOrder(3);
+        ob.removeOrder(3, false);
         Assertions.assertEquals(ob.getOrderMap().get(2).getNextOrder().getOrderId(), 4);
         Assertions.assertEquals(ob.getOrderMap().get(4).getPrevOrder().getOrderId(), 2);
         Assertions.assertEquals(ob.getOrderMap().get(2).getParentLimit().getTotalVolumeAtLimit(), 1700);
         Assertions.assertEquals(ob.getTotalBidSize(), 3500);
         Assertions.assertTrue(ob.compareTotalBidAskVolumes());
 
-        ob.removeOrder(0);
+        ob.removeOrder(0, false);
         Assertions.assertNull(ob.getOrderMap().get(1).getPrevOrder());
         Assertions.assertEquals(ob.getOrderMap().get(1).getParentLimit().getTotalVolumeAtLimit(), 1600);
         Assertions.assertEquals(ob.getTotalBidSize(), 3400);
         Assertions.assertTrue(ob.compareTotalBidAskVolumes());
 
-        ob.removeOrder(11);
+        ob.removeOrder(11, false);
         Assertions.assertEquals(ob.getOrderMap().get(10).getNextOrder().getOrderId(), 22);
         Assertions.assertEquals(ob.getOrderMap().get(22).getPrevOrder().getOrderId(), 10);
         Assertions.assertEquals(ob.getOrderMap().get(10).getParentLimit().getTotalVolumeAtLimit(), 2600);
@@ -85,7 +84,7 @@ public class OrderbookTest {
         ob.printOrderbook();
 
         // remove
-        ob.removeOrder(16);
+        ob.removeOrder(16, true);
         Assertions.assertFalse(ob.getOrderMap().containsKey(16));
         Assertions.assertEquals(ob.getOrderMap().get(12).getParentLimit().getTotalVolumeAtLimit(), 250);
         Assertions.assertTrue(ob.compareTotalBidAskVolumes());

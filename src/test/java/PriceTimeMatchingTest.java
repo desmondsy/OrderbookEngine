@@ -16,7 +16,7 @@ public class PriceTimeMatchingTest {
     public void setup()
     {
         // setup book
-        List<Order> orderList = OrderGeneratorTest.readOrdersFromFile("MultipleLimits.txt");
+        List<Order> orderList = OrderGeneratorTest.readOrdersFromFile("data/MultipleLimits.txt");
         System.out.println("--------------------ADDING--------------------");
 
         for (Order o : orderList) {

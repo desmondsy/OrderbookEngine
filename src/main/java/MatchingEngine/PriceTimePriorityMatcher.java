@@ -3,8 +3,6 @@ package MatchingEngine;
 import Orderbook.Orderbook;
 import Orders.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.TreeSet;
 
 class PriceTimePriorityMatcher extends AbstractOrderMatcher {
@@ -19,7 +17,6 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
         }
 
         TreeSet<Limit> limitTree = o.isBuy() ? ob.getAskLimits() : ob.getBidLimits();
-        List<Integer> ordersToRemove = new ArrayList<>();
 
         for (Limit limit: limitTree)
         {
@@ -37,7 +34,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                     // we are able to fill an entire resting order with possible excess, so we keep going
                     trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), ptr.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId()));
                     o.setCurrentQuantity(o.getCurrentQuantity() - ptr.getCurrentQuantity());
-                    ordersToRemove.add(ptr.getOrderId()); // resting orders are fully matched
+                    ob.removeOrder(ptr.getOrderId(), true);
                     ptr = ptr.getNextOrder();
                 }
                 else
@@ -61,24 +58,14 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
 
         }
 
+        ob.clearEmptyLimitsAfterMatching(o.isBuy());
+
         if (o.getCurrentQuantity() > 0)
         {
             // ideally there should be no order quantity remaining after going through ALL the limit levels
             // the initial total size condition should prevent us from reaching this block.
             // raise exception if we somehow reach here.
             throw new UnexpectedRemainingVolumeException("There shouldn't be any remaining quantity here.");
-        }
-
-        /*
-        TODO: we currently have to store the orders we are going to remove during matching in a list instead of removing it
-          directly. The reason is ob.removeOrder can remove a Limit from TreeSet<Limit>. When we iterate through the
-          treeset and attempt to remove elements from it during iteration, we will run into a ConcurrentModificationException. Therefore, we
-          instead keep track of what orders we need to remove, and loop through the list separately to avoid the issue.
-          Not the most ideal... but does the job
-         */
-        for (Integer orderId: ordersToRemove)
-        {
-            ob.removeOrder(orderId);
         }
     }
 
@@ -94,7 +81,6 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
         }
 
         TreeSet<Limit> limitTree = o.isBuy() ? ob.getAskLimits() : ob.getBidLimits();
-        List<Integer> ordersToRemove = new ArrayList<>();
         double farTouchPrice = o.isBuy() ? ob.getBestAsk() : ob.getBestBid();
 
         for (Limit limit: limitTree)
@@ -109,7 +95,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                     {
                         trades.add(new Trade(o.getSide(), ptr.getParentLimit().getPrice(), ptr.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId()));
                         o.setCurrentQuantity(o.getCurrentQuantity() - ptr.getCurrentQuantity());
-                        ordersToRemove.add(ptr.getOrderId()); // resting orders are fully matched
+                        ob.removeOrder(ptr.getOrderId(), true);
                         ptr = ptr.getNextOrder();
                     }
                     else
@@ -128,12 +114,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
             }
         }
 
-        // remove orders before potentially adding the new order as we need might need to update the orderbook best bid/ask
-        // state during removeOrder
-        for (Integer orderId: ordersToRemove)
-        {
-            ob.removeOrder(orderId);
-        }
+        ob.clearEmptyLimitsAfterMatching(o.isBuy());
 
         // e.g. if we do an aggressive limit buy 500 qty on a book like 500 x 100/101 x 200, any remaining qty
         // will be made into a passive buy at 101. we don't clear anything beyond the top level.
