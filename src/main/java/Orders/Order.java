@@ -58,6 +58,6 @@ public class Order {
 
     @Override
     public String toString() {
-        return "Order(orderId=" + orderId + ", timestamp=" + timestamp + ", price=" + price + ", initialQty=" + initialQuantity + ", currentQty=" + currentQuantity + ", nextOrder=" + nextOrder + ")";
+        return "Order(orderId=" + orderId + ", timestamp=" + timestamp + ", side=" + side + ", price=" + price + ", initialQty=" + initialQuantity + ", currentQty=" + currentQuantity + ", nextOrder=" + nextOrder + ")";
     }
 }
