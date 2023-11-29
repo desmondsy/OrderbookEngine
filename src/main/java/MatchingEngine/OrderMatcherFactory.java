@@ -3,11 +3,11 @@ package MatchingEngine;
 public class OrderMatcherFactory {
     public static AbstractOrderMatcher createOrderMatcher(String matcher)
     {
-        if (matcher.equals("pricetime"))
-            return new PriceTimePriorityMatcher();
-        else if (matcher.equals("prorata"))
-            return new ProRataMatcher();
-        else
-            throw new RuntimeException("matcher invalid.");
+        return switch (matcher) {
+            case "pricetime" -> new PriceTimePriorityMatcher();
+            case "prorata" -> new ProRataMatcher();
+            case "proratawithtop" -> new ProRataWithTopMatcher();
+            default -> throw new RuntimeException("matcher invalid.");
+        };
     }
 }
