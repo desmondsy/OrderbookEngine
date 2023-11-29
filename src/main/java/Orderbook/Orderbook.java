@@ -1,14 +1,11 @@
 package Orderbook;
 
 import MatchingEngine.AbstractOrderMatcher;
-import MatchingEngine.IOrderMatcher;
 import Orders.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.TreeSet;
 
 public class Orderbook {
@@ -91,7 +88,7 @@ public class Orderbook {
         updateBookStateAfterAdd(incomingOrder);
     }
 
-    public void removeOrder(int removeOrderId)
+    public void removeOrder(int removeOrderId, boolean isDuringMatching)
     {
         // check if removeOrder id is in the book
         if (containsOrder(removeOrderId))
@@ -127,8 +124,18 @@ public class Orderbook {
                 orderToRemove.getPrevOrder().setNextOrder(orderToRemove.getNextOrder());
             }
 
-            // cleanup limit from tree if we just removed the only order in the limit level
-            removeLimitFromTreeIfEmpty(orderToRemove.getParentLimit(), orderToRemove.isBuy());
+            // update the best bid/ask if we remove the only order from the top-of-book limit. If this is called DURING
+            // matching, then we cannot remove the empty limit from the limitTree because we are going to be traversing the limitTree,
+            // and in the process we cannot modify it. However, if an order is removed during non-matching, e.g. we just simulate an order cancellation,
+            // then we are able to directly remove empty limits as we aren't doing any traversing.
+            if (isDuringMatching)
+            {
+                updateBestBidAskIfLimitDepleted(orderToRemove.getParentLimit(), orderToRemove.isBuy());
+            }
+            else
+            {
+                updateBestBidAskIfLimitDepletedAndRemoveEmptyLimit(orderToRemove.getParentLimit(), orderToRemove.isBuy());
+            }
             orderMap.remove(removeOrderId);
             updateBookStateAfterRemove(orderToRemove);
         }
@@ -141,7 +148,7 @@ public class Orderbook {
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
             Order newOrder = new Order(orderMap.get(orderId), price);
-            removeOrder(orderId);
+            removeOrder(orderId, true);
 
             // in the event of a price mod, the Limit pointer of the modOrder should reflect the new Limit
             addOrder(newOrder);
@@ -155,7 +162,7 @@ public class Orderbook {
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
             Order newOrder = new Order(orderMap.get(orderId), qty);
-            removeOrder(orderId);
+            removeOrder(orderId, true);
 
             // in the event of a price mod, the Limit pointer of the modOrder should reflect the new Limit
             addOrder(newOrder);
@@ -184,23 +191,64 @@ public class Orderbook {
         }
     }
 
-    private void removeLimitFromTreeIfEmpty(Limit l, boolean isBuy)
+    private void updateBestBidAskIfLimitDepleted(Limit l, boolean limitOrderIsBuy)
+    {
+        // TODO: this function is a little convoluted, rewrite it later
+        // if a market buy order has just depleted the entirety of a limit sell level P, P will be empty and we need to
+        // update the best ask to reflect the depletion. We will therefore enter the below if block.
+        // a market buy order will be interacting with the resting limit orders on the ask book. The resting limit order
+        // we have just removed to completely deplete P is therefore a sell order (limitOrderIsBuy==false), and so we have
+        // to update the bestAsk.
+        // A market order could deplete several limit levels, hence when iterating through askLimits, we have a !limit.isEmpty()
+        // check to ensure that the bestAsk is not updated to an empty limit. Unfortunately we are unable to remove empty limits
+        // DURING the order matching as we will run into a ConcurrentModificationException error, which is another reason why we
+        // need the !limit.isEmpty() check.
+        if (l.isEmpty())
+        {
+            if (limitOrderIsBuy)
+            {
+                if (l.getPrice() == bestBid)
+                {
+                    for (Limit limit: bidLimits)
+                    {
+                        if (!limit.isEmpty())
+                        {
+                            bestBid = limit.getPrice();
+                            return;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (l.getPrice() == bestAsk)
+                {
+                    for (Limit limit: askLimits)
+                    {
+                        if (!limit.isEmpty())
+                        {
+                            bestAsk = limit.getPrice();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void updateBestBidAskIfLimitDepletedAndRemoveEmptyLimit(Limit l, boolean limitOrderIsBuy)
     {
         if (l.isEmpty())
         {
-            if (isBuy)
+            if (limitOrderIsBuy)
             {
                 bidLimits.remove(l);
                 if (l.getPrice() == bestBid)
                 {
-                    Iterator<Limit> it = bidLimits.iterator();
-                    if (it.hasNext())
+                    for (Limit limit: bidLimits)
                     {
-                        bestBid = it.next().getPrice();
-                    }
-                    else
-                    {
-                        // TODO: some warning
+                        bestBid = limit.getPrice();
+                        return;
                     }
                 }
             }
@@ -209,14 +257,10 @@ public class Orderbook {
                 askLimits.remove(l);
                 if (l.getPrice() == bestAsk)
                 {
-                    Iterator<Limit> it = askLimits.iterator();
-                    if (it.hasNext())
+                    for (Limit limit: askLimits)
                     {
-                        bestAsk = it.next().getPrice();
-                    }
-                    else
-                    {
-                        // TODO: some warning
+                        bestAsk = limit.getPrice();
+                        return;
                     }
                 }
             }
@@ -254,6 +298,18 @@ public class Orderbook {
             int newTotalLimitVolume = o.getParentLimit().getTotalVolumeAtLimit() - o.getCurrentQuantity();
             o.getParentLimit().setTotalVolumeAtLimit(newTotalLimitVolume);
         }
+    }
+
+    public void clearEmptyLimitsAfterMatching(boolean isBuy)
+    {
+         if (isBuy) // market buys (sells)/aggressive limit buys (sells) will only ever interact with the ask (bid) book
+         {
+             askLimits.removeIf(Limit::isEmpty); // for each askLimit, remove if the limit is empty
+         }
+         else
+         {
+             bidLimits.removeIf(Limit::isEmpty);
+         }
     }
 
     private static <T> T treeSetTryGetValue(TreeSet<T> set, T key) {
