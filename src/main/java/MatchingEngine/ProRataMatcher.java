@@ -59,29 +59,48 @@ class ProRataMatcher extends AbstractOrderMatcher{
             if (o.getCurrentQuantity() > 0 && filledQty != totalVolumeAtLimit)
             {
                 // the limit is not depleted but there is still remainder qty from the pro rata roundoff. We apply FIFO
-                // (time priority) matching for the 'roundoff' quantity. If the limit was fully depleted without any residue, filledQty == totalVolumeAtLimit.
+                // (time priority) matching for the 'roundoff' quantity.
+                // If the limit was fully depleted without any residue, filledQty == totalVolumeAtLimit, and we don't have to do this FIFO residue distribution.
                 ptr = limit.getHead();
                 while (ptr != null && o.getCurrentQuantity() > 0)
                 {
+                    // either the market order remaining qty is fully filled by the current limit order, or the market order
+                    // clears the entire current limit order and we have to move to the next limit order with ptr.
                     int canAllocate = ptr.getCurrentQuantity();
                     int allocated = Math.min(o.getCurrentQuantity(), canAllocate);
+
                     if (allocated > 0)
                     {
-                        limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - allocated);
-                        if (o.isBuy())
-                            ob.setTotalAskSize(ob.getTotalAskSize() - allocated);
+                        trades.add(new Trade(o.getSide(), limit.getPrice(), allocated, ptr.getOrderId(), o.getOrderId()));
+
+                        // if howMuchLeftToFill reaches 0, the pro rata residue volume has been fully distributed, we can exit the while loop.
+                        int howMuchLeftToFill = o.getCurrentQuantity() - allocated;
+                        o.setCurrentQuantity(howMuchLeftToFill);
+
+                        // current limit order is fully filled, we can remove it from the book
+                        int bookOrderRemainder = ptr.getCurrentQuantity() - allocated;
+                        if (bookOrderRemainder == 0)
+                        {
+                            ob.removeOrder(ptr.getOrderId(), true);
+                        }
                         else
-                            ob.setTotalBidSize(ob.getTotalBidSize() - allocated);
-                        ptr.setCurrentQuantity(ptr.getCurrentQuantity() - allocated);
+                        {
+                            // update book
+                            limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - allocated);
+                            if (o.isBuy())
+                                ob.setTotalAskSize(ob.getTotalAskSize() - allocated);
+                            else
+                                ob.setTotalBidSize(ob.getTotalBidSize() - allocated);
+
+                            ptr.setCurrentQuantity(bookOrderRemainder);
+                        }
                     }
                     else
                     {
+                        // TODO: we shouldn't reach here
                         ob.removeOrder(ptr.getOrderId(), true);
                     }
 
-                    getTrades().add(new Trade(o.getSide(), limit.getPrice(), allocated, ptr.getOrderId(), o.getOrderId()));
-                    int howMuchLeftToFill = o.getCurrentQuantity() - allocated;
-                    o.setCurrentQuantity(howMuchLeftToFill);
                     ptr = ptr.getNextOrder();
                 }
             }
@@ -157,29 +176,48 @@ class ProRataMatcher extends AbstractOrderMatcher{
                 if (o.getCurrentQuantity() > 0 && filledQty != totalVolumeAtLimit)
                 {
                     // the limit is not depleted but there is still remainder qty from the pro rata roundoff. We apply FIFO
-                    // (time priority) matching for the 'roundoff' quantity. If the limit was fully depleted without any residue, filledQty == totalVolumeAtLimit.
+                    // (time priority) matching for the 'roundoff' quantity.
+                    // If the limit was fully depleted without any residue, filledQty == totalVolumeAtLimit, and we don't have to do this FIFO residue distribution.
                     ptr = limit.getHead();
                     while (ptr != null && o.getCurrentQuantity() > 0)
                     {
+                        // either the market order remaining qty is fully filled by the current limit order, or the market order
+                        // clears the entire current limit order and we have to move to the next limit order with ptr.
                         int canAllocate = ptr.getCurrentQuantity();
                         int allocated = Math.min(o.getCurrentQuantity(), canAllocate);
+
                         if (allocated > 0)
                         {
-                            limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - allocated);
-                            if (o.isBuy())
-                                ob.setTotalAskSize(ob.getTotalAskSize() - allocated);
+                            trades.add(new Trade(o.getSide(), limit.getPrice(), allocated, ptr.getOrderId(), o.getOrderId()));
+
+                            // if howMuchLeftToFill reaches 0, the pro rata residue volume has been fully distributed, we can exit the while loop.
+                            int howMuchLeftToFill = o.getCurrentQuantity() - allocated;
+                            o.setCurrentQuantity(howMuchLeftToFill);
+
+                            // current limit order is fully filled, we can remove it from the book
+                            int bookOrderRemainder = ptr.getCurrentQuantity() - allocated;
+                            if (bookOrderRemainder == 0)
+                            {
+                                ob.removeOrder(ptr.getOrderId(), true);
+                            }
                             else
-                                ob.setTotalBidSize(ob.getTotalBidSize() - allocated);
-                            ptr.setCurrentQuantity(ptr.getCurrentQuantity() - allocated);
+                            {
+                                // update book
+                                limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - allocated);
+                                if (o.isBuy())
+                                    ob.setTotalAskSize(ob.getTotalAskSize() - allocated);
+                                else
+                                    ob.setTotalBidSize(ob.getTotalBidSize() - allocated);
+
+                                ptr.setCurrentQuantity(bookOrderRemainder);
+                            }
                         }
                         else
                         {
+                            // TODO: we shouldn't reach here
                             ob.removeOrder(ptr.getOrderId(), true);
                         }
 
-                        getTrades().add(new Trade(o.getSide(), limit.getPrice(), allocated, ptr.getOrderId(), o.getOrderId()));
-                        int howMuchLeftToFill = o.getCurrentQuantity() - allocated;
-                        o.setCurrentQuantity(howMuchLeftToFill);
                         ptr = ptr.getNextOrder();
                     }
                 }
