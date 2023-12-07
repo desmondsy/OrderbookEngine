@@ -338,31 +338,31 @@ public class Orderbook {
 
     public void printOrderbook()
     {
-        System.out.println("BID LIMITS");
+        logger.info("BID LIMITS");
         for (Limit limit: bidLimits)
         {
-            System.out.println(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
+            logger.info(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
             Order ptr = limit.getHead();
             while (ptr != null)
             {
-                System.out.println(ptr);
+                logger.info(ptr);
                 ptr = ptr.getNextOrder();
             }
         }
 
-        System.out.println("ASK LIMITS");
+        logger.info("ASK LIMITS");
         for (Limit limit: askLimits)
         {
-            System.out.println(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
+            logger.info(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
             Order ptr = limit.getHead();
             while (ptr != null)
             {
-                System.out.println(ptr);
+                logger.info(ptr);
                 ptr = ptr.getNextOrder();
             }
         }
 
-        System.out.println("\n####\n");
+        logger.info("\n####\n");
     }
 
     private void orderBookStateLog()
@@ -370,7 +370,7 @@ public class Orderbook {
         Limit bestBidLimit = treeSetTryGetValue(bidLimits, new Limit(bestBid));
         Limit bestAskLimit = treeSetTryGetValue(askLimits, new Limit(bestAsk));
         if (bestBidLimit != null && bestAskLimit != null)
-            logger.info("{} x {}/{} x {}", bestBidLimit.getTotalVolumeAtLimit(), bestBid, bestAsk, bestAskLimit.getTotalVolumeAtLimit());
+            logger.info("BBO: {} x {}/{} x {}", bestBidLimit.getTotalVolumeAtLimit(), bestBid, bestAsk, bestAskLimit.getTotalVolumeAtLimit());
         logger.info("totalBidSize: {}, totalAskSize: {}", totalBidSize, totalAskSize);
     }
 
