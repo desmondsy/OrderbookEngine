@@ -4,11 +4,15 @@ import MatchingEngine.AbstractOrderMatcher;
 import Orders.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.TreeSet;
 
 public class Orderbook {
+    private static final Logger logger = LogManager.getLogger(Orderbook.class);
+
     @Getter private TreeSet<Limit> askLimits = new TreeSet<>(new AskLimitComparator());
     @Getter private TreeSet<Limit> bidLimits = new TreeSet<>(new BidLimitComparator());
     @Getter private HashMap<Integer, Order> orderMap = new HashMap<>();
@@ -38,11 +42,13 @@ public class Orderbook {
 
     private void addOrder(Order incomingOrder, Limit limit, TreeSet<Limit> limitTree)
     {
+        logger.info("adding new order: {}", incomingOrder);
         // market orders and aggressive limit orders do NOT need to be put in the orderMap.
 
         // market order
         if (incomingOrder.getOrdType() == ORDER_TYPE.MARKET)
         {
+            logger.info("market order detected. Going to match");
             matchingEngine.matchMarketOrder(incomingOrder, this);
             return;
         }
@@ -51,9 +57,12 @@ public class Orderbook {
         if ((incomingOrder.isBuy() && incomingOrder.getPrice() >= bestAsk) ||
                 (!incomingOrder.isBuy() && incomingOrder.getPrice() <= bestBid))
         {
+            logger.info("aggressive limit order detected. Going to match");
             matchingEngine.matchAggressiveLimitOrder(incomingOrder, this);
             return;
         }
+
+        logger.info("passive order detected. Adding to book.");
 
         // passive order
         Limit existingLimit = treeSetTryGetValue(limitTree, limit); // log(n) search (balanced BST). This is basically the .contains method but we also extract the element.
@@ -86,6 +95,8 @@ public class Orderbook {
         orderMap.put(incomingOrder.getOrderId(), incomingOrder);
         nextAvailableOrderId = incomingOrder.getOrderId() + 1; // TODO: not sure about this
         updateBookStateAfterAdd(incomingOrder);
+
+        orderBookStateLog();
     }
 
     public void removeOrder(int removeOrderId, boolean isDuringMatching)
@@ -93,6 +104,7 @@ public class Orderbook {
         // check if removeOrder id is in the book
         if (containsOrder(removeOrderId))
         {
+            logger.info("removing orderId {}", removeOrderId);
             Order orderToRemove = orderMap.get(removeOrderId);
             // alter head/tail pointers of order Limit
             if (orderToRemove.getParentLimit().getHead() == orderToRemove && orderToRemove.getParentLimit().getTail() == orderToRemove)
@@ -138,6 +150,8 @@ public class Orderbook {
             }
             orderMap.remove(removeOrderId);
             updateBookStateAfterRemove(orderToRemove);
+
+            orderBookStateLog();
         }
     }
 
@@ -145,6 +159,7 @@ public class Orderbook {
     {
         if (containsOrder(orderId))
         {
+            logger.info("modifying price of orderId {}", orderId);
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
             Order newOrder = new Order(orderMap.get(orderId), price);
@@ -159,6 +174,7 @@ public class Orderbook {
     {
         if (containsOrder(orderId))
         {
+            logger.info("modifying order qty of orderId {}", orderId);
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
             Order newOrder = new Order(orderMap.get(orderId), qty);
@@ -347,6 +363,15 @@ public class Orderbook {
         }
 
         System.out.println("\n####\n");
+    }
+
+    private void orderBookStateLog()
+    {
+        Limit bestBidLimit = treeSetTryGetValue(bidLimits, new Limit(bestBid));
+        Limit bestAskLimit = treeSetTryGetValue(askLimits, new Limit(bestAsk));
+        if (bestBidLimit != null && bestAskLimit != null)
+            logger.info("{} x {}/{} x {}", bestBidLimit.getTotalVolumeAtLimit(), bestBid, bestAsk, bestAskLimit.getTotalVolumeAtLimit());
+        logger.info("totalBidSize: {}, totalAskSize: {}", totalBidSize, totalAskSize);
     }
 
     public boolean compareTotalBidAskVolumes()
