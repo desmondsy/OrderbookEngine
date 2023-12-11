@@ -22,6 +22,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
         }
 
         TreeSet<Limit> limitTree = o.isBuy() ? ob.getAskLimits() : ob.getBidLimits();
+        int filledQty = 0;
 
         for (Limit limit: limitTree)
         {
@@ -35,7 +36,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
             // whilst there are still orders to be matched in the current limit level AND market order still has excess unmatched qty
             while(ptr!=null && o.getCurrentQuantity() > 0)
             {
-                logger.info("matching with resting order: {}", ptr);
+                logger.info("matching with resting orderID: {}, price: {}, qty: {}", ptr.getOrderId(), ptr.getPrice(), ptr.getCurrentQuantity());
                 if (o.getCurrentQuantity() >= ptr.getCurrentQuantity())
                 {
                     // we are able to fill an entire resting order with possible excess, so we keep going
@@ -43,6 +44,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                     trades.add(trade);
                     logger.info("new trade: {}", trade);
 
+                    filledQty += ptr.getCurrentQuantity();
                     o.setCurrentQuantity(o.getCurrentQuantity() - ptr.getCurrentQuantity());
                     ob.removeOrder(ptr.getOrderId(), true);
                     ptr = ptr.getNextOrder();
@@ -53,6 +55,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                     trades.add(trade);
                     logger.info("new trade: {}", trade);
 
+                    filledQty += o.getCurrentQuantity();
                     int remainingQtyToFill = o.getCurrentQuantity();
                     limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - remainingQtyToFill);
                     if (o.isBuy())
@@ -63,7 +66,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                     o.setCurrentQuantity(0); // market order is fully matched, we can exit the while loop
                 }
 
-                logger.info("orderInitialQty: {}, orderCurrentQty: {}", o.getInitialQuantity(), o.getCurrentQuantity());
+                logger.info("orderID: {}, filledQty: {}/{}", o.getOrderId(), filledQty, o.getInitialQuantity());
             }
 
             // if we reach here, we have either depleted the current limit level OR the market order has been completely filled.
@@ -74,7 +77,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                 break;
             }
 
-            logger.info("limit price {} cleared. Order still has {} remaining qty. Continuing...", limit.getPrice(), o.getCurrentQuantity());
+            logger.info("limit price {} cleared. Order still has {} remaining qty. Continuing to next best limit...", limit.getPrice(), o.getCurrentQuantity());
         }
 
         ob.clearEmptyLimitsAfterMatching(o.isBuy());
@@ -102,6 +105,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
 
         TreeSet<Limit> limitTree = o.isBuy() ? ob.getAskLimits() : ob.getBidLimits();
         double farTouchPrice = o.isBuy() ? ob.getBestAsk() : ob.getBestBid();
+        int filledQty = 0;
 
         for (Limit limit: limitTree)
         {
@@ -112,7 +116,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
 
                 while(ptr!=null && o.getCurrentQuantity() > 0)
                 {
-                    logger.info("matching with resting order: {}", ptr);
+                    logger.info("matching with resting orderID: {}, price: {}, qty: {}", ptr.getOrderId(), ptr.getPrice(), ptr.getCurrentQuantity());
                     if (o.getCurrentQuantity() >= ptr.getCurrentQuantity())
                     {
                         // we are able to fill an entire resting order with possible excess, so we keep going
@@ -120,6 +124,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                         trades.add(trade);
                         logger.info("new trade: {}", trade);
 
+                        filledQty += ptr.getCurrentQuantity();
                         o.setCurrentQuantity(o.getCurrentQuantity() - ptr.getCurrentQuantity());
                         ob.removeOrder(ptr.getOrderId(), true);
                         ptr = ptr.getNextOrder();
@@ -130,6 +135,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                         trades.add(trade);
                         logger.info("new trade: {}", trade);
 
+                        filledQty += o.getCurrentQuantity();
                         int remainingQtyToFill = o.getCurrentQuantity();
                         limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - remainingQtyToFill);
                         if (o.isBuy())
@@ -140,7 +146,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                         o.setCurrentQuantity(0); // market order is fully matched, we can exit the while loop
                     }
 
-                    logger.info("orderInitialQty: {}, orderCurrentQty: {}", o.getInitialQuantity(), o.getCurrentQuantity());
+                    logger.info("orderID: {}, filledQty: {}/{}", o.getOrderId(), filledQty, o.getInitialQuantity());
                 }
             }
         }

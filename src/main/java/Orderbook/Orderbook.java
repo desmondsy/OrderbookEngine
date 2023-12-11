@@ -35,7 +35,7 @@ public class Orderbook {
         incomingOrder.setTimestamp(System.nanoTime());
 
         if (orderMap.containsKey(incomingOrder.getOrderId()))
-            throw new RuntimeException("orderMap already contains this orderId.");
+            throw new RuntimeException("orderMap already contains this orderID.");
 
         addOrder(incomingOrder, incomingOrder.getParentLimit(), incomingOrder.isBuy() ? bidLimits : askLimits);
     }
@@ -104,7 +104,7 @@ public class Orderbook {
         // check if removeOrder id is in the book
         if (containsOrder(removeOrderId))
         {
-            logger.info("removing orderId {}", removeOrderId);
+            logger.info("removing orderID {}", removeOrderId);
             Order orderToRemove = orderMap.get(removeOrderId);
             // alter head/tail pointers of order Limit
             if (orderToRemove.getParentLimit().getHead() == orderToRemove && orderToRemove.getParentLimit().getTail() == orderToRemove)
