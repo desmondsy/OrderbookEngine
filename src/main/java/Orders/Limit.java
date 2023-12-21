@@ -3,6 +3,7 @@ package Orders;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashSet;
 import java.util.Objects;
 
 public class Limit {
@@ -10,6 +11,7 @@ public class Limit {
     @Getter @Setter private Order head = null;
     @Getter @Setter private Order tail = null;
     @Getter @Setter private int totalVolumeAtLimit = 0;
+    @Getter private HashSet<Integer> orderIds = new HashSet<>();
 
     public Limit(double price) {
         // Each passive order points to a limit price. We need to create the limit if it doesnt yet exist in the orderbook.

@@ -92,6 +92,7 @@ public class Orderbook {
             limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() + incomingOrder.getInitialQuantity());
         }
 
+        limit.getOrderIds().add(incomingOrder.getOrderId());
         orderMap.put(incomingOrder.getOrderId(), incomingOrder);
         nextAvailableOrderId = incomingOrder.getOrderId() + 1; // TODO: not sure about this
         updateBookStateAfterAdd(incomingOrder);
@@ -148,6 +149,8 @@ public class Orderbook {
             {
                 updateBestBidAskIfLimitDepletedAndRemoveEmptyLimit(orderToRemove.getParentLimit(), orderToRemove.isBuy());
             }
+
+            orderToRemove.getParentLimit().getOrderIds().remove(removeOrderId);
             orderMap.remove(removeOrderId);
             updateBookStateAfterRemove(orderToRemove);
 
