@@ -62,7 +62,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                         ob.setTotalAskSize(ob.getTotalAskSize() - remainingQtyToFill);
                     else
                         ob.setTotalBidSize(ob.getTotalBidSize() - remainingQtyToFill);
-                    ptr.setCurrentQuantity(ptr.getInitialQuantity() - remainingQtyToFill);
+                    ptr.setCurrentQuantity(ptr.getCurrentQuantity() - remainingQtyToFill);
                     o.setCurrentQuantity(0); // market order is fully matched, we can exit the while loop
                 }
 
@@ -142,7 +142,7 @@ class PriceTimePriorityMatcher extends AbstractOrderMatcher {
                             ob.setTotalAskSize(ob.getTotalAskSize() - remainingQtyToFill);
                         else
                             ob.setTotalBidSize(ob.getTotalBidSize() - remainingQtyToFill);
-                        ptr.setCurrentQuantity(ptr.getInitialQuantity() - remainingQtyToFill);
+                        ptr.setCurrentQuantity(ptr.getCurrentQuantity() - remainingQtyToFill);
                         o.setCurrentQuantity(0); // market order is fully matched, we can exit the while loop
                     }
 
