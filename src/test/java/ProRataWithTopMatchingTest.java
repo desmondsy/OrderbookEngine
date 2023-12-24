@@ -4,7 +4,6 @@ import Orders.Order;
 import Orders.Side;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -28,11 +27,11 @@ public class ProRataWithTopMatchingTest {
     @Test
     public void testPRWTMarketOrderMatching()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.addOrder(new Order(0, Side.BUY, 6, null));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.getMatchingEngine().printTrades();
 
@@ -51,11 +50,11 @@ public class ProRataWithTopMatchingTest {
     @Test
     public void testPRWTMarketOrderMatching2()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.addOrder(new Order(0, Side.BUY, 120, null));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.getMatchingEngine().printTrades();
 
@@ -76,11 +75,11 @@ public class ProRataWithTopMatchingTest {
     @Test
     public void testPRWTMarketBuyOrderMatchingMultipleLimits()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.addOrder(new Order(0, Side.BUY, 3100, null));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.getMatchingEngine().printTrades();
 
@@ -101,11 +100,11 @@ public class ProRataWithTopMatchingTest {
     @Test
     public void testPRWTMarketSellOrderMatching()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.addOrder(new Order(0, Side.SELL, 500, null));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.getMatchingEngine().printTrades();
 
@@ -121,11 +120,11 @@ public class ProRataWithTopMatchingTest {
     @Test
     public void testPRWTLimitBuyOrderMatchingMultipleLimits()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.addOrder(new Order(0, Side.BUY, 3322, 11d));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.getMatchingEngine().printTrades();
 

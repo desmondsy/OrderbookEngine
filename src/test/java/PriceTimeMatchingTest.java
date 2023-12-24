@@ -27,12 +27,12 @@ public class PriceTimeMatchingTest {
     @Test
     public void testMatchLargeMarketBuyOrder()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         // buy market order
         ob.addOrder(new Order(0, Side.BUY, 3250, null));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         Assertions.assertFalse(ob.getAskLimits().contains(new Limit(11)));
         Assertions.assertEquals(ob.getOrderMap().get(18).getCurrentQuantity(), 50);
@@ -46,12 +46,12 @@ public class PriceTimeMatchingTest {
     @Test
     public void testMatchLargeMarketSellOrder()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         // sell market order
         ob.addOrder(new Order(0, Side.SELL, 2800, null));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         Assertions.assertFalse(ob.getAskLimits().contains(new Limit(10)));
         Assertions.assertFalse(ob.getAskLimits().contains(new Limit(9)));
@@ -65,24 +65,24 @@ public class PriceTimeMatchingTest {
     @Test
     public void testMatchAggressiveLimitBuyOrder()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         // aggressive limit buy
         ob.addOrder(new Order(0, Side.BUY, 350, 11d));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
         Assertions.assertTrue(ob.compareTotalBidAskVolumes());
     }
 
     @Test
     public void testMatchAggressiveMultipleLimitsBuyOrder()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         // aggressive limit buy
         ob.addOrder(new Order(0, Side.BUY, 3300, 11d));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         Assertions.assertEquals(ob.getBestAsk(), 12);
         Assertions.assertEquals(ob.getBestBid(), 11);

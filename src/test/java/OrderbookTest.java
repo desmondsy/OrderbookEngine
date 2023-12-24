@@ -21,7 +21,7 @@ public class OrderbookTest {
             ob.addOrder(o);
         }
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         // asserts here
         Assertions.assertEquals(ob.getTotalBidSize(), 4200);
@@ -59,7 +59,7 @@ public class OrderbookTest {
         Assertions.assertEquals(ob.getTotalAskSize(), 3600);
         Assertions.assertTrue(ob.compareTotalBidAskVolumes());
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         System.out.println("--------------------MODIFYING--------------------");
 
@@ -81,7 +81,7 @@ public class OrderbookTest {
         Assertions.assertEquals(ob.getOrderMap().get(25).getCurrentQuantity(), 150);
         Assertions.assertTrue(ob.compareTotalBidAskVolumes());
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         // remove
         ob.removeOrder(16, true);
@@ -89,6 +89,6 @@ public class OrderbookTest {
         Assertions.assertEquals(ob.getOrderMap().get(12).getParentLimit().getTotalVolumeAtLimit(), 250);
         Assertions.assertTrue(ob.compareTotalBidAskVolumes());
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
     }
 }

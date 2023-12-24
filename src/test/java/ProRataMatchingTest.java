@@ -27,11 +27,11 @@ public class ProRataMatchingTest {
     @Test
     public void testProRataMarketOrderMatching()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.addOrder(new Order(0, Side.BUY, 6, null));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.getMatchingEngine().printTrades();
 
@@ -45,11 +45,11 @@ public class ProRataMatchingTest {
     @Test
     public void testProRataMarketOrderMatching2()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.addOrder(new Order(0, Side.BUY, 3200, null));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.getMatchingEngine().printTrades();
 
@@ -62,11 +62,11 @@ public class ProRataMatchingTest {
     @Test
     public void testProRataAggressiveLimitOrderMatching()
     {
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.addOrder(new Order(0, Side.BUY, 3201, 11d));
 
-        ob.printOrderbook();
+        ob.printOrderbookWithOrders();
 
         ob.getMatchingEngine().printTrades();
 
