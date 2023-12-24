@@ -7,8 +7,9 @@ import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.HashMap;
-import java.util.TreeSet;
+import java.sql.Array;
+import java.util.*;
+import java.util.stream.IntStream;
 
 public class Orderbook {
     private static final Logger logger = LogManager.getLogger(Orderbook.class);
@@ -22,6 +23,9 @@ public class Orderbook {
     @Getter private double bestAsk = Integer.MAX_VALUE;
     @Getter @Setter private int totalAskSize = 0;
     @Getter @Setter private int totalBidSize = 0;
+
+    @Getter private HashMap<Double, ListMap<Integer>> buyOrderIds = new HashMap<>();
+    @Getter private HashMap<Double, ListMap<Integer>> sellOrderIds = new HashMap<>();
 
     public Orderbook(AbstractOrderMatcher matchingEngine)
     {
@@ -50,6 +54,7 @@ public class Orderbook {
         {
             logger.info("market order detected. Going to match");
             matchingEngine.matchMarketOrder(incomingOrder, this);
+            orderBookStateLog();
             return;
         }
 
@@ -59,6 +64,7 @@ public class Orderbook {
         {
             logger.info("aggressive limit order detected. Going to match");
             matchingEngine.matchAggressiveLimitOrder(incomingOrder, this);
+            orderBookStateLog();
             return;
         }
 
@@ -92,7 +98,19 @@ public class Orderbook {
             limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() + incomingOrder.getInitialQuantity());
         }
 
-        limit.getOrderIds().add(incomingOrder.getOrderId());
+        if (incomingOrder.isBuy())
+        {
+            buyOrderIds.putIfAbsent(incomingOrder.getPrice(), new ListMap<Integer>());
+            ListMap<Integer> currentLimitBuyIds = buyOrderIds.get(incomingOrder.getPrice());
+            currentLimitBuyIds.addItem(incomingOrder.getOrderId());
+        }
+        else
+        {
+            sellOrderIds.putIfAbsent(incomingOrder.getPrice(), new ListMap<Integer>());
+            ListMap<Integer> currentLimitSellIds = sellOrderIds.get(incomingOrder.getPrice());
+            currentLimitSellIds.addItem(incomingOrder.getOrderId());
+        }
+
         orderMap.put(incomingOrder.getOrderId(), incomingOrder);
         nextAvailableOrderId = incomingOrder.getOrderId() + 1; // TODO: not sure about this
         updateBookStateAfterAdd(incomingOrder);
@@ -150,7 +168,15 @@ public class Orderbook {
                 updateBestBidAskIfLimitDepletedAndRemoveEmptyLimit(orderToRemove.getParentLimit(), orderToRemove.isBuy());
             }
 
-            orderToRemove.getParentLimit().getOrderIds().remove(removeOrderId);
+            if (orderToRemove.isBuy())
+            {
+                buyOrderIds.get(orderToRemove.getPrice()).removeItem(orderToRemove.getOrderId());
+            }
+            else
+            {
+                sellOrderIds.get(orderToRemove.getPrice()).removeItem(orderToRemove.getOrderId());
+            }
+
             orderMap.remove(removeOrderId);
             updateBookStateAfterRemove(orderToRemove);
 
@@ -166,7 +192,7 @@ public class Orderbook {
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
             Order newOrder = new Order(orderMap.get(orderId), price);
-            removeOrder(orderId, true);
+            removeOrder(orderId, false);
 
             // in the event of a price mod, the Limit pointer of the modOrder should reflect the new Limit
             addOrder(newOrder);
@@ -181,7 +207,7 @@ public class Orderbook {
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
             Order newOrder = new Order(orderMap.get(orderId), qty);
-            removeOrder(orderId, true);
+            removeOrder(orderId, false);
 
             // in the event of a price mod, the Limit pointer of the modOrder should reflect the new Limit
             addOrder(newOrder);
@@ -339,8 +365,53 @@ public class Orderbook {
         return null;
     }
 
+    public void printOrderbookWithOrders()
+    {
+        logger.info("BOOK DEPTH WITH QUEUE POS:");
+
+        logger.info("BID LIMITS");
+        for (Limit limit: bidLimits)
+        {
+            logger.info(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
+            Order ptr = limit.getHead();
+            ArrayList<String> arr = new ArrayList<>();
+            int sum = 0;
+            while (ptr != null)
+            {
+                String str = String.format("id=%s | q=%s", ptr.getOrderId(), ptr.getCurrentQuantity());
+                arr.add(str);
+                sum += ptr.getCurrentQuantity();
+                ptr = ptr.getNextOrder();
+            }
+            logger.info(arr);
+            logger.info("total: {}", sum);
+        }
+
+        logger.info("ASK LIMITS");
+        for (Limit limit: askLimits)
+        {
+            logger.info(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
+            Order ptr = limit.getHead();
+            ArrayList<String> arr = new ArrayList<>();
+            int sum = 0;
+            while (ptr != null)
+            {
+                String str = String.format("id=%s | q=%s", ptr.getOrderId(), ptr.getCurrentQuantity());
+                arr.add(str);
+                sum += ptr.getCurrentQuantity();
+                ptr = ptr.getNextOrder();
+            }
+            logger.info(arr);
+            logger.info("total: {}", sum);
+        }
+
+        logger.info("\n####\n");
+    }
+
     public void printOrderbook()
     {
+        logger.info("BOOK DEPTH:");
+
         logger.info("BID LIMITS");
         for (Limit limit: bidLimits)
         {
@@ -348,7 +419,6 @@ public class Orderbook {
             Order ptr = limit.getHead();
             while (ptr != null)
             {
-                logger.info(ptr);
                 ptr = ptr.getNextOrder();
             }
         }
@@ -360,7 +430,6 @@ public class Orderbook {
             Order ptr = limit.getHead();
             while (ptr != null)
             {
-                logger.info(ptr);
                 ptr = ptr.getNextOrder();
             }
         }
