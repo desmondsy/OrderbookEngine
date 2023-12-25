@@ -31,7 +31,7 @@ public class OrderbookSimulator {
         this.ob = ob;
         this.MATCHING_ENGINE = simulationConfig.getMatchingEngine();
         this.INIT_ITERATIONS = simulationConfig.getInitIterations();
-        this.ITERATIONS = simulationConfig.getInitIterations();
+        this.ITERATIONS = simulationConfig.getIterations();
         this.BID_INIT = simulationConfig.getBidPriceInit();
         this.ASK_INIT = simulationConfig.getAskPriceInit();
         this.TICK_SIZE = simulationConfig.getTickSize();
