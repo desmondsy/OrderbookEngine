@@ -7,9 +7,7 @@ import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.sql.Array;
 import java.util.*;
-import java.util.stream.IntStream;
 
 public class Orderbook {
     private static final Logger logger = LogManager.getLogger(Orderbook.class);
@@ -355,6 +353,26 @@ public class Orderbook {
          {
              bidLimits.removeIf(Limit::isEmpty);
          }
+    }
+
+    public int getBestBidSize()
+    {
+        Limit bestBidLimit = treeSetTryGetValue(bidLimits, new Limit(bestBid));
+        if (bestBidLimit != null)
+        {
+            return bestBidLimit.getTotalVolumeAtLimit();
+        }
+        return -1;
+    }
+
+    public int getBestAskSize()
+    {
+        Limit bestAskLimit = treeSetTryGetValue(askLimits, new Limit(bestAsk));
+        if (bestAskLimit != null)
+        {
+            return bestAskLimit.getTotalVolumeAtLimit();
+        }
+        return -1;
     }
 
     private static <T> T treeSetTryGetValue(TreeSet<T> set, T key) {
