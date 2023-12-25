@@ -82,12 +82,7 @@ public class OrderbookSimulator {
         // core simulation method
         for (int i=0;i<ITERATIONS;i++)
         {
-
             Event event = pickEvent(eventProbabilitiesMap);
-            int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
-            double price;
-            int volume;
-
             logger.info("\n");
 
             if (event == null)
@@ -99,141 +94,35 @@ public class OrderbookSimulator {
             switch (event)
             {
                 case PASSIVE_BUY:
-                    volume = generateVolume(event.isBuyEvent(), event.isAggressiveEvent());
-                    price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
-
-                    logger.info("New event: PASSIVE_BUY - creating new order with price: {}, qty: {}", price, volume);
-                    ob.addOrder(new Order(0, Side.BUY, volume, price));
+                    processPassiveBuy();
                     break;
 
                 case PASSIVE_SELL:
-                    volume = generateVolume(event.isBuyEvent(), event.isAggressiveEvent());
-                    price = ob.getBestBid() + distanceFrom * TICK_SIZE;
-
-                    logger.info("New event: PASSIVE_SELL - creating new order with price: {}, qty: {}", price, volume);
-                    ob.addOrder(new Order(0, Side.SELL, volume, price));
+                    processPassiveSell();
                     break;
 
                 case AGGRESSIVE_BUY:
-                    ob.printOrderbookWithOrders();
-
-                    volume = generateVolume(event.isBuyEvent(), event.isAggressiveEvent());
-                    if (Math.random() > 0.5)
-                    {
-                        // market order
-                        logger.info("New event: AGGRESSIVE_BUY (market) - volume: {}", volume);
-                        ob.addOrder(new Order(0, Side.BUY, volume, null));
-                    }
-                    else
-                    {
-                        // aggressive limit order - far touch
-                        price = ob.getBestAsk();
-                        logger.info("New event: AGGRESSIVE_BUY (limit) - price: {}, volume: {}", price, volume);
-                        ob.addOrder(new Order(0, Side.BUY, volume, price));
-                    }
+                    processAggressiveBuy();
                     break;
 
                 case AGGRESSIVE_SELL:
-                    ob.printOrderbookWithOrders();
-
-                    volume = generateVolume(event.isBuyEvent(), event.isAggressiveEvent());
-                    if (Math.random() > 0)
-                    {
-                        // market order
-                        logger.info("New event: AGGRESSIVE_SELL (market) - volume: {}", volume);
-                        ob.addOrder(new Order(0, Side.SELL, volume, null));
-                    }
-                    else
-                    {
-                        // aggressive limit order - far touch
-                        price = ob.getBestBid();
-                        logger.info("New event: AGGRESSIVE_SELL (market) - price: {}, volume: {}", price, volume);
-                        ob.addOrder(new Order(0, Side.SELL, volume, price));
-                    }
+                    processAggressiveSell();
                     break;
 
                 case MOD_BUY:
-                    // mod buy price or mod buy qty, 50/50 probability
-                    price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
-                    logger.info("New event: MOD_BUY - going to mod a random order at the {} price level.", price);
-                    if (ob.getBuyOrderIds().get(price) == null || ob.getBuyOrderIds().get(price).isEmpty())
-                    {
-                        logger.info("MOD_BUY - price level does not exist yet or there are no orders on that pricw level. Not going to mod.");
-                        continue;
-                    }
-
-                    int buyOrderIdToMod = ob.getBuyOrderIds().get(price).chooseRandomItem();
-
-                    if (Math.random() > 0)
-                    {
-                        // mod qty
-                        int newQty = generateRandomNumber(1, 100);
-
-                        logger.info("New event: MOD_BUY - going to mod orderID: {}, qty from {} to {}",
-                                buyOrderIdToMod, ob.getOrderMap().get(buyOrderIdToMod).getCurrentQuantity(), newQty);
-                        ob.modifyOrderQty(buyOrderIdToMod, newQty);
-                    }
-                    else
-                    {
-                        // TODO: mod price, use rand > 0 to skip for now
-                    }
+                    processModBuy();
                     break;
 
                 case MOD_SELL:
-                    // mod sell price or mod sell qty, 50/50 probability
-                    price = ob.getBestBid() + distanceFrom * TICK_SIZE;
-                    logger.info("New event: MOD_SELL - going to mod a random order at the {} price level.", price);
-                    if (ob.getSellOrderIds().get(price) == null || ob.getSellOrderIds().get(price).isEmpty())
-                    {
-                        logger.info("MOD_SELL - price level does not exist yet or there are no orders on that pricw level. Not going to mod.");
-                        continue;
-                    }
-
-                    int sellOrderIdToMod = ob.getSellOrderIds().get(price).chooseRandomItem();
-
-                    if (Math.random() > 0)
-                    {
-                        // mod qty
-                        int newQty = generateRandomNumber(1, 100);
-                        logger.info("New event: MOD_SELL - going to mod orderID: {}, qty from {} to {}",
-                                sellOrderIdToMod, ob.getOrderMap().get(sellOrderIdToMod).getCurrentQuantity(), newQty);
-                        ob.modifyOrderQty(sellOrderIdToMod, newQty);
-                    }
-                    else
-                    {
-                        // TODO: mod price, use rand > 0 to skip for now
-
-                    }
+                    processModSell();
                     break;
 
                 case CANCEL_BUY:
-                    price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
-                    logger.info("New event: CANCEL_BUY - going to cancel a random order at the {} price level.", price);
-
-                    if (ob.getBuyOrderIds().get(price) == null || ob.getBuyOrderIds().get(price).isEmpty())
-                    {
-                        logger.info("CANCEL_BUY - price level does not exist yet or there are no orders on that pricw level. Skipping.");
-                        continue;
-                    }
-
-                    int buyOrderIdToCancel = ob.getBuyOrderIds().get(price).chooseRandomItem();
-                    logger.info("CANCEL_BUY - going to cancel orderID: {}", buyOrderIdToCancel);
-                    ob.removeOrder(buyOrderIdToCancel, false);
+                    processCancelBuy();
                     break;
 
                 case CANCEL_SELL:
-                    price = ob.getBestBid() + distanceFrom * TICK_SIZE;
-                    logger.info("New event: CANCEL_SELL - going to cancel a random order at the {} price level.", price);
-
-                    if (ob.getSellOrderIds().get(price) == null || ob.getSellOrderIds().get(price).isEmpty())
-                    {
-                        logger.info("CANCEL_SELL - price level does not exist yet or there are no orders on that pricw level. Skipping.");
-                        continue;
-                    }
-
-                    int sellOrderIdToCancel = ob.getSellOrderIds().get(price).chooseRandomItem();
-                    logger.info("CANCEL_SELL - going to cancel orderID: {}", sellOrderIdToCancel);
-                    ob.removeOrder(sellOrderIdToCancel, false);
+                    processCancelSell();
                     break;
 
                 default:
@@ -244,9 +133,159 @@ public class OrderbookSimulator {
         ob.printOrderbook();
     }
 
+    private void processPassiveBuy()
+    {
+        int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
+        double price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
+        int volume = generateVolume(true, false);
+
+        logger.info("New event: PASSIVE_BUY - creating new order with price: {}, qty: {}", price, volume);
+        ob.addOrder(new Order(0, Side.BUY, volume, price));
+    }
+
+    private void processPassiveSell()
+    {
+        int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
+        double price = ob.getBestBid() + distanceFrom * TICK_SIZE;
+        int volume = generateVolume(false, false);
+
+        logger.info("New event: PASSIVE_SELL - creating new order with price: {}, qty: {}", price, volume);
+        ob.addOrder(new Order(0, Side.SELL, volume, price));
+    }
+
+    private void processAggressiveBuy()
+    {
+        ob.printOrderbookWithOrders();
+
+        int volume = generateVolume(true, true);
+        if (Math.random() > 0.5)
+        {
+            // market order
+            logger.info("New event: AGGRESSIVE_BUY (market) - volume: {}", volume);
+            ob.addOrder(new Order(0, Side.BUY, volume, null));
+        }
+        else
+        {
+            // aggressive limit order - far touch
+            double price = ob.getBestAsk();
+            logger.info("New event: AGGRESSIVE_BUY (limit) - price: {}, volume: {}", price, volume);
+            ob.addOrder(new Order(0, Side.BUY, volume, price));
+        }
+    }
+
+    private void processAggressiveSell()
+    {
+        ob.printOrderbookWithOrders();
+
+        int volume = generateVolume(false, true);
+        if (Math.random() > 0)
+        {
+            // market order
+            logger.info("New event: AGGRESSIVE_SELL (market) - volume: {}", volume);
+            ob.addOrder(new Order(0, Side.SELL, volume, null));
+        }
+        else
+        {
+            // aggressive limit order - far touch
+            double price = ob.getBestBid();
+            logger.info("New event: AGGRESSIVE_SELL (market) - price: {}, volume: {}", price, volume);
+            ob.addOrder(new Order(0, Side.SELL, volume, price));
+        }
+    }
+
+    private void processModBuy()
+    {
+        // mod buy price or mod buy qty, 50/50 probability
+        int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
+        double price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
+        logger.info("New event: MOD_BUY - going to mod a random order at the {} price level.", price);
+        if (ob.getBuyOrderIds().get(price) == null || ob.getBuyOrderIds().get(price).isEmpty())
+        {
+            logger.info("MOD_BUY - price level does not exist yet or there are no orders on that pricw level. Not going to mod.");
+            return;
+        }
+
+        int buyOrderIdToMod = ob.getBuyOrderIds().get(price).chooseRandomItem();
+
+        if (Math.random() > 0)
+        {
+            // mod qty
+            int newQty = generateRandomNumber(1, 100);
+
+            logger.info("New event: MOD_BUY - going to mod orderID: {}, qty from {} to {}",
+                    buyOrderIdToMod, ob.getOrderMap().get(buyOrderIdToMod).getCurrentQuantity(), newQty);
+            ob.modifyOrderQty(buyOrderIdToMod, newQty);
+        }
+        else
+        {
+            // TODO: mod price, use rand > 0 to skip for now
+        }
+    }
+
+    private void processModSell()
+    {
+        // mod sell price or mod sell qty, 50/50 probability
+        int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
+        double price = ob.getBestBid() + distanceFrom * TICK_SIZE;
+        logger.info("New event: MOD_SELL - going to mod a random order at the {} price level.", price);
+        if (ob.getSellOrderIds().get(price) == null || ob.getSellOrderIds().get(price).isEmpty())
+        {
+            logger.info("MOD_SELL - price level does not exist yet or there are no orders on that pricw level. Not going to mod.");
+            return;
+        }
+
+        int sellOrderIdToMod = ob.getSellOrderIds().get(price).chooseRandomItem();
+
+        if (Math.random() > 0)
+        {
+            // mod qty
+            int newQty = generateRandomNumber(1, 100);
+            logger.info("New event: MOD_SELL - going to mod orderID: {}, qty from {} to {}",
+                    sellOrderIdToMod, ob.getOrderMap().get(sellOrderIdToMod).getCurrentQuantity(), newQty);
+            ob.modifyOrderQty(sellOrderIdToMod, newQty);
+        }
+        else
+        {
+            // TODO: mod price, use rand > 0 to skip for now
+        }
+    }
+
+    private void processCancelBuy()
+    {
+        int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
+        double price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
+        logger.info("New event: CANCEL_BUY - going to cancel a random order at the {} price level.", price);
+
+        if (ob.getBuyOrderIds().get(price) == null || ob.getBuyOrderIds().get(price).isEmpty())
+        {
+            logger.info("CANCEL_BUY - price level does not exist yet or there are no orders on that pricw level. Skipping.");
+            return;
+        }
+
+        int buyOrderIdToCancel = ob.getBuyOrderIds().get(price).chooseRandomItem();
+        logger.info("CANCEL_BUY - going to cancel orderID: {}", buyOrderIdToCancel);
+        ob.removeOrder(buyOrderIdToCancel, false);
+    }
+
+    private void processCancelSell()
+    {
+        int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
+        double price = ob.getBestBid() + distanceFrom * TICK_SIZE;
+        logger.info("New event: CANCEL_SELL - going to cancel a random order at the {} price level.", price);
+
+        if (ob.getSellOrderIds().get(price) == null || ob.getSellOrderIds().get(price).isEmpty())
+        {
+            logger.info("CANCEL_SELL - price level does not exist yet or there are no orders on that pricw level. Skipping.");
+            return;
+        }
+
+        int sellOrderIdToCancel = ob.getSellOrderIds().get(price).chooseRandomItem();
+        logger.info("CANCEL_SELL - going to cancel orderID: {}", sellOrderIdToCancel);
+        ob.removeOrder(sellOrderIdToCancel, false);
+    }
+
     private int generateVolume(boolean isBuy, boolean isAggressiveEvent)
     {
-        logger.info("isBuy: {}, isAggressiveEvent: {}", isBuy, isAggressiveEvent);
         if (MATCHING_ENGINE.contains("prorata") && isAggressiveEvent)
         {
             // random value between PRORATA_FAR_TOUCH_MIN_MULTIPLIER and PRORATA_FAR_TOUCH_MAX_MULTIPLIER
