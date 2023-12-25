@@ -1,24 +1,26 @@
 import Orderbook.ListMap;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Random;
 
 public class ListMapTest {
     @Test
     public void testListMapObject()
     {
-        ListMap<Integer> lm = new ListMap<Integer>();
+        ListMap<Integer> lm = new ListMap<Integer>(new Random(123));
         lm.addItem(10);
         lm.addItem(111);
         lm.addItem(12);
         lm.addItem(13);
         lm.addItem(14);
 
-        System.out.println(lm);
+        Assertions.assertEquals(lm.size(), 5);
+        Assertions.assertEquals(lm.chooseRandomItem(), 12);
 
         lm.removeItem(10);
 
-        System.out.println(lm);
-
-        System.out.println(lm.chooseRandomItem());
-
+        Assertions.assertEquals(lm.size(), 4);
+        Assertions.assertEquals(lm.chooseRandomItem(), 14);
     }
 }

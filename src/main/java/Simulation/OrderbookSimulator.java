@@ -26,7 +26,9 @@ public class OrderbookSimulator {
     private final double[] decayingProbabilitiesArr;
     private final Map<Event, Double> eventProbabilitiesMap;
 
-    public OrderbookSimulator(Orderbook ob, SimulationConfig simulationConfig)
+    private Random random;
+
+    public OrderbookSimulator(Orderbook ob, SimulationConfig simulationConfig, Random random)
     {
         this.ob = ob;
         this.MATCHING_ENGINE = simulationConfig.getMatchingEngine();
@@ -40,6 +42,8 @@ public class OrderbookSimulator {
 
         this.decayingProbabilitiesArr = generateDecayingProbabilities(simulationConfig.getBookEventDepth());
         this.eventProbabilitiesMap = EventProbabilitiesLoader.createEventProbabilitiesMap(simulationConfig.getEventProbabilitiesStyle());
+
+        this.random = random;
     }
 
     public void run()
@@ -56,13 +60,11 @@ public class OrderbookSimulator {
 
         // initialize the order book with passive orders only on each side.
         for (int i=0;i<INIT_ITERATIONS;i++) {
-            double random = Math.random();
-
             int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
             int volume = generateRandomNumber(1, 100);
             double price;
 
-            if (random > 0.5)
+            if (random.nextDouble() > 0.5)
             {
                 // PASSIVE BUY
                 price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
@@ -158,7 +160,7 @@ public class OrderbookSimulator {
         ob.printOrderbookWithOrders();
 
         int volume = generateVolume(true, true);
-        if (Math.random() > 0.5)
+        if (random.nextDouble() > 0.5)
         {
             // market order
             logger.info("New event: AGGRESSIVE_BUY (market) - volume: {}", volume);
@@ -178,7 +180,7 @@ public class OrderbookSimulator {
         ob.printOrderbookWithOrders();
 
         int volume = generateVolume(false, true);
-        if (Math.random() > 0)
+        if (random.nextDouble() > 0)
         {
             // market order
             logger.info("New event: AGGRESSIVE_SELL (market) - volume: {}", volume);
@@ -207,7 +209,7 @@ public class OrderbookSimulator {
 
         int buyOrderIdToMod = ob.getBuyOrderIds().get(price).chooseRandomItem();
 
-        if (Math.random() > 0)
+        if (random.nextDouble() > 0)
         {
             // mod qty
             int newQty = generateRandomNumber(1, 100);
@@ -236,7 +238,7 @@ public class OrderbookSimulator {
 
         int sellOrderIdToMod = ob.getSellOrderIds().get(price).chooseRandomItem();
 
-        if (Math.random() > 0)
+        if (random.nextDouble() > 0)
         {
             // mod qty
             int newQty = generateRandomNumber(1, 100);
@@ -289,7 +291,7 @@ public class OrderbookSimulator {
         if (MATCHING_ENGINE.contains("prorata") && isAggressiveEvent)
         {
             // random value between PRORATA_FAR_TOUCH_MIN_MULTIPLIER and PRORATA_FAR_TOUCH_MAX_MULTIPLIER
-            double rand = PRORATA_FAR_TOUCH_MIN_MULTIPLIER + Math.random() * (PRORATA_FAR_TOUCH_MAX_MULTIPLIER - PRORATA_FAR_TOUCH_MIN_MULTIPLIER);
+            double rand = PRORATA_FAR_TOUCH_MIN_MULTIPLIER + random.nextDouble() * (PRORATA_FAR_TOUCH_MAX_MULTIPLIER - PRORATA_FAR_TOUCH_MIN_MULTIPLIER);
 
             // for pro rata orders, we want to simulate larger order quantities in order to see the pro rata distribution effect more clearly
             if (isBuy)
@@ -331,7 +333,6 @@ public class OrderbookSimulator {
 
     private Event pickEvent(Map<Event, Double> eventProbabilitiesMap)
     {
-        Random random = new Random();
         double randomValue = random.nextDouble();
         double cumulativeProbability = 0.0;
 
@@ -347,7 +348,6 @@ public class OrderbookSimulator {
 
     private int selectIndexWithProbability(double[] probabilities)
     {
-        Random random = new Random();
         double cumulativeProbability = 0d;
 
         for (int i = 0; i < probabilities.length; i++) {
@@ -360,8 +360,7 @@ public class OrderbookSimulator {
         return -1;
     }
 
-    public static int generateRandomNumber(int min, int max) {
-        Random random = new Random();
+    public int generateRandomNumber(int min, int max) {
         return random.nextInt(max - min + 1) + min;
     }
 }

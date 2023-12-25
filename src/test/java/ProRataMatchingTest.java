@@ -7,10 +7,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Random;
 
 public class ProRataMatchingTest {
 
-    Orderbook ob = new Orderbook(OrderMatcherFactory.createOrderMatcher("prorata"));
+    Orderbook ob = new Orderbook(OrderMatcherFactory.createOrderMatcher("prorata"), new Random(123));
 
     @BeforeEach
     public void setup()

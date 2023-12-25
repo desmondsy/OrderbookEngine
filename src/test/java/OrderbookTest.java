@@ -6,9 +6,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Random;
 
 public class OrderbookTest {
-    Orderbook ob = new Orderbook(OrderMatcherFactory.createOrderMatcher("pricetime"));
+    Orderbook ob = new Orderbook(OrderMatcherFactory.createOrderMatcher("pricetime"), new Random(123));
 
     @Test
     public void testAddRemoveModifyOrders()

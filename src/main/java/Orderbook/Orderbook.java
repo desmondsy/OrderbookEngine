@@ -25,9 +25,12 @@ public class Orderbook {
     @Getter private HashMap<Double, ListMap<Integer>> buyOrderIds = new HashMap<>();
     @Getter private HashMap<Double, ListMap<Integer>> sellOrderIds = new HashMap<>();
 
-    public Orderbook(AbstractOrderMatcher matchingEngine)
+    private Random random;
+
+    public Orderbook(AbstractOrderMatcher matchingEngine, Random random)
     {
         this.matchingEngine = matchingEngine;
+        this.random = random;
     }
 
     public void addOrder(Order incomingOrder)
@@ -98,13 +101,13 @@ public class Orderbook {
 
         if (incomingOrder.isBuy())
         {
-            buyOrderIds.putIfAbsent(incomingOrder.getPrice(), new ListMap<Integer>());
+            buyOrderIds.putIfAbsent(incomingOrder.getPrice(), new ListMap<Integer>(random));
             ListMap<Integer> currentLimitBuyIds = buyOrderIds.get(incomingOrder.getPrice());
             currentLimitBuyIds.addItem(incomingOrder.getOrderId());
         }
         else
         {
-            sellOrderIds.putIfAbsent(incomingOrder.getPrice(), new ListMap<Integer>());
+            sellOrderIds.putIfAbsent(incomingOrder.getPrice(), new ListMap<Integer>(random));
             ListMap<Integer> currentLimitSellIds = sellOrderIds.get(incomingOrder.getPrice());
             currentLimitSellIds.addItem(incomingOrder.getOrderId());
         }

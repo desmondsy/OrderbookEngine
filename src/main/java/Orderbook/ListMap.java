@@ -5,11 +5,13 @@ import java.util.*;
 public class ListMap<T> {
     private Map<T, Integer> itemToPosition;
     private List<T> items;
+    private Random random;
 
-    public ListMap()
+    public ListMap(Random random)
     {
         itemToPosition = new HashMap<>();
         items = new ArrayList<>();
+        this.random = random;
     }
 
     public void addItem(T item)
@@ -30,13 +32,17 @@ public class ListMap<T> {
 
     public T chooseRandomItem()
     {
-        Random random = new Random();
         return items.get(random.nextInt(items.size()));
     }
 
     public boolean isEmpty()
     {
         return items.isEmpty();
+    }
+
+    public int size()
+    {
+        return items.size();
     }
 
     @Override
