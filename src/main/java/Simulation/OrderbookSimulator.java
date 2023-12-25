@@ -6,6 +6,7 @@ import Orders.Side;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.plaf.basic.BasicEditorPaneUI;
 import java.util.Map;
 import java.util.Random;
 
@@ -15,6 +16,8 @@ public class OrderbookSimulator {
     private Orderbook ob;
 
     private final String MATCHING_ENGINE;
+    private final String EVENT_PROBABILITIES_STYLE;
+    private final int BOOK_EVENT_DEPTH;
     private final int INIT_ITERATIONS; // build the book, no matching during this phase
     private final int ITERATIONS; // post init
     private final double BID_INIT;
@@ -32,6 +35,8 @@ public class OrderbookSimulator {
     {
         this.ob = ob;
         this.MATCHING_ENGINE = simulationConfig.getMatchingEngine();
+        this.EVENT_PROBABILITIES_STYLE = simulationConfig.getEventProbabilitiesStyle();
+        this.BOOK_EVENT_DEPTH = simulationConfig.getBookEventDepth();
         this.INIT_ITERATIONS = simulationConfig.getInitIterations();
         this.ITERATIONS = simulationConfig.getIterations();
         this.BID_INIT = simulationConfig.getBidPriceInit();
@@ -48,6 +53,7 @@ public class OrderbookSimulator {
 
     public void run()
     {
+        logParameters();
         initializeOrderbook();
         simulateEvents();
     }
@@ -157,7 +163,7 @@ public class OrderbookSimulator {
 
     private void processAggressiveBuy()
     {
-        ob.printOrderbookWithOrders();
+//        ob.printOrderbookWithOrders();
 
         int volume = generateVolume(true, true);
         if (random.nextDouble() > 0.5)
@@ -177,7 +183,7 @@ public class OrderbookSimulator {
 
     private void processAggressiveSell()
     {
-        ob.printOrderbookWithOrders();
+//        ob.printOrderbookWithOrders();
 
         int volume = generateVolume(false, true);
         if (random.nextDouble() > 0)
@@ -362,5 +368,21 @@ public class OrderbookSimulator {
 
     public int generateRandomNumber(int min, int max) {
         return random.nextInt(max - min + 1) + min;
+    }
+
+    private void logParameters()
+    {
+        logger.info("SIMULATION PARAMETERS:");
+        logger.info("MATCHING_ENGINE: {}", MATCHING_ENGINE);
+        logger.info("EVENT_PROBABILITIES_STYLE: {}", EVENT_PROBABILITIES_STYLE);
+        logger.info("BOOK_EVENT_DEPTH: {}", BOOK_EVENT_DEPTH);
+        logger.info("INIT_ITERATIONS: {}", INIT_ITERATIONS);
+        logger.info("ITERATIONS: {}", ITERATIONS);
+        logger.info("BID_INIT: {}", BID_INIT);
+        logger.info("ASK_INIT: {}", ASK_INIT);
+        logger.info("TICK_SIZE: {}", TICK_SIZE);
+        logger.info("PRORATA_FAR_TOUCH_MIN_MULTIPLIER: {}", PRORATA_FAR_TOUCH_MIN_MULTIPLIER);
+        logger.info("PRORATA_FAR_TOUCH_MAX_MULTIPLIER: {}", PRORATA_FAR_TOUCH_MAX_MULTIPLIER);
+        logger.info("\n");
     }
 }
