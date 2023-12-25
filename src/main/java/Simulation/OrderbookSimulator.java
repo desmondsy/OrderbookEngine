@@ -24,6 +24,7 @@ public class OrderbookSimulator {
     private final double PRORATA_FAR_TOUCH_MAX_MULTIPLIER;
 
     private final double[] decayingProbabilitiesArr;
+    private final Map<Event, Double> eventProbabilitiesMap;
 
     public OrderbookSimulator(Orderbook ob, SimulationConfig simulationConfig)
     {
@@ -38,6 +39,7 @@ public class OrderbookSimulator {
         this.PRORATA_FAR_TOUCH_MAX_MULTIPLIER = simulationConfig.getProRataFarTouchMaxMultiplier();
 
         this.decayingProbabilitiesArr = generateDecayingProbabilities(simulationConfig.getBookEventDepth());
+        this.eventProbabilitiesMap = EventProbabilitiesLoader.createEventProbabilitiesMap(simulationConfig.getEventProbabilitiesStyle());
     }
 
     public void simulate()
@@ -77,9 +79,7 @@ public class OrderbookSimulator {
 
     private void simulateEvents()
     {
-        Map<Event, Double> eventProbabilitiesMap = EventProbabilitiesLoader.createEventProbabilitiesMap("eventProbabilitiesDefault.properties");
-
-        // simulate
+        // core simulation method
         for (int i=0;i<ITERATIONS;i++)
         {
 

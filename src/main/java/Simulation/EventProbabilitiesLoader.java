@@ -9,7 +9,21 @@ import java.util.Properties;
 
 public class EventProbabilitiesLoader {
 
-    public static Map<Event, Double> createEventProbabilitiesMap(String propertiesFileName) {
+    public static Map<Event, Double> createEventProbabilitiesMap(String eventProbabilitiesStyle) {
+        String propertiesFileName;
+        switch (eventProbabilitiesStyle)
+        {
+            case "uptrend":
+                propertiesFileName = "eventProbabilitiesUptrendBias.properties";
+                break;
+            case "downtrend":
+                propertiesFileName = "eventProbabilitiesDowntrendBias.properties";
+                break;
+            default:
+                propertiesFileName = "eventProbabilitiesDefault.properties";
+                break;
+        }
+
         Map<Event, Double> eventProbabilities = new HashMap<>();
 
         Properties properties = new Properties();

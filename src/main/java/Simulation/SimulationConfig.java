@@ -9,6 +9,7 @@ import java.util.Properties;
 @Getter
 public class SimulationConfig {
     private String matchingEngine;
+    private String eventProbabilitiesStyle;
     private int bookEventDepth;
     private int initIterations;
     private int iterations;
@@ -41,6 +42,7 @@ public class SimulationConfig {
 
     private void setValuesFromProperties(Properties properties) {
         this.matchingEngine = properties.getProperty("MATCHING_ENGINE");
+        this.eventProbabilitiesStyle = properties.getProperty("EVENT_PROBABILITIES_STYLE");
         this.bookEventDepth = Integer.parseInt(properties.getProperty("BOOK_EVENT_DEPTH"));
         this.initIterations = Integer.parseInt(properties.getProperty("INIT_ITERATIONS"));
         this.iterations = Integer.parseInt(properties.getProperty("ITERATIONS"));
