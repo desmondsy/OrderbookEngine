@@ -16,19 +16,15 @@ public class SimulationConfig {
     private double askPriceInit;
     private double tickSize;
     private double proRataFarTouchMinMultiplier; // pro rata order size has to be at least % of far touch
+    private double proRataFarTouchMaxMultiplier;
 
     public SimulationConfig(String propertiesFilePath) {
         Properties properties = loadProperties(propertiesFilePath);
-        setValuesFromProperties(properties);
+        setValuesFromProperties(properties); // TODO: handle null
         validateConfig();
     }
 
     private static Properties loadProperties(String filePath) {
-//        Properties properties = new Properties();
-//        FileInputStream fis = new FileInputStream(filePath);
-//        properties.load(fis);
-//        fis.close();
-//        return properties;
         Properties properties = new Properties();
         try (InputStream input = SimulationConfig.class.getClassLoader().getResourceAsStream(filePath)) {
             if (input == null) {
@@ -52,6 +48,7 @@ public class SimulationConfig {
         this.askPriceInit = Double.parseDouble(properties.getProperty("ASK_INIT"));
         this.tickSize = Double.parseDouble(properties.getProperty("TICK_SIZE"));
         this.proRataFarTouchMinMultiplier = Double.parseDouble(properties.getProperty("PRORATA_FAR_TOUCH_MIN_MULTIPLIER"));
+        this.proRataFarTouchMaxMultiplier = Double.parseDouble(properties.getProperty("PRORATA_FAR_TOUCH_MAX_MULTIPLIER"));
     }
 
     private void validateConfig() {
@@ -72,6 +69,11 @@ public class SimulationConfig {
         if (proRataFarTouchMinMultiplier > 1 || proRataFarTouchMinMultiplier <= 0)
         {
             throw new IllegalArgumentException("proRataFarTouchMinMultiplier must be between 0 and 1.");
+        }
+
+        if (proRataFarTouchMaxMultiplier > 1)
+        {
+            throw new IllegalArgumentException("proRataFarTouchMaxMultiplier must be less than 1.");
         }
     }
 }
