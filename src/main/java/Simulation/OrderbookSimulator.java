@@ -42,7 +42,7 @@ public class OrderbookSimulator {
         this.eventProbabilitiesMap = EventProbabilitiesLoader.createEventProbabilitiesMap(simulationConfig.getEventProbabilitiesStyle());
     }
 
-    public void simulate()
+    public void run()
     {
         initializeOrderbook();
         simulateEvents();
