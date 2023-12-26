@@ -19,6 +19,7 @@ public class SimulationTest {
 
         simulator.run();
 
+        // may produce different results...
         Assertions.assertEquals(ob.getTotalBidSize(), 23892);
         Assertions.assertEquals(ob.getTotalAskSize(), 41517);
         Assertions.assertEquals(ob.getBestAsk(), 99);
