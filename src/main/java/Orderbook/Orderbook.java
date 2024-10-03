@@ -47,13 +47,13 @@ public class Orderbook {
 
     private void addOrder(Order incomingOrder, Limit limit, TreeSet<Limit> limitTree)
     {
-        logger.info("adding new order: {}", incomingOrder);
+        logger.debug("adding new order: {}", incomingOrder);
         // market orders and aggressive limit orders do NOT need to be put in the orderMap.
 
         // market order
         if (incomingOrder.getOrdType() == ORDER_TYPE.MARKET)
         {
-            logger.info("market order detected. Going to match");
+            logger.debug("market order detected. Going to match");
             matchingEngine.matchMarketOrder(incomingOrder, this);
             orderBookStateLog();
             return;
@@ -63,13 +63,13 @@ public class Orderbook {
         if ((incomingOrder.isBuy() && incomingOrder.getPrice() >= bestAsk) ||
                 (!incomingOrder.isBuy() && incomingOrder.getPrice() <= bestBid))
         {
-            logger.info("aggressive limit order detected. Going to match");
+            logger.debug("aggressive limit order detected. Going to match");
             matchingEngine.matchAggressiveLimitOrder(incomingOrder, this);
             orderBookStateLog();
             return;
         }
 
-        logger.info("passive order detected. Adding to book.");
+        logger.debug("passive order detected. Adding to book.");
 
         // passive order
         Limit existingLimit = treeSetTryGetValue(limitTree, limit); // log(n) search (balanced BST). This is basically the .contains method but we also extract the element.
@@ -124,7 +124,7 @@ public class Orderbook {
         // check if removeOrder id is in the book
         if (containsOrder(removeOrderId))
         {
-            logger.info("removing orderID {}", removeOrderId);
+            logger.debug("removing orderID {}", removeOrderId);
             Order orderToRemove = orderMap.get(removeOrderId);
             // alter head/tail pointers of order Limit
             if (orderToRemove.getParentLimit().getHead() == orderToRemove && orderToRemove.getParentLimit().getTail() == orderToRemove)
@@ -189,7 +189,7 @@ public class Orderbook {
     {
         if (containsOrder(orderId))
         {
-            logger.info("modifying price of orderId {}", orderId);
+            logger.debug("modifying price of orderId {}", orderId);
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
             Order newOrder = new Order(orderMap.get(orderId), price);
@@ -204,7 +204,7 @@ public class Orderbook {
     {
         if (containsOrder(orderId))
         {
-            logger.info("modifying order qty of orderId {}", orderId);
+            logger.debug("modifying order qty of orderId {}", orderId);
             // modification = deletion + insertion. upon deletion of a particular orderId, does the subsequent
             // insertion use the same deleted orderId? or does it use the next id available? probably latter
             Order newOrder = new Order(orderMap.get(orderId), qty);
@@ -388,12 +388,12 @@ public class Orderbook {
 
     public void printOrderbookWithOrders()
     {
-        logger.info("BOOK DEPTH WITH QUEUE POS:");
+        logger.debug("BOOK DEPTH WITH QUEUE POS:");
 
-        logger.info("BID LIMITS");
+        logger.debug("BID LIMITS");
         for (Limit limit: bidLimits)
         {
-            logger.info(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
+            logger.debug(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
             Order ptr = limit.getHead();
             ArrayList<String> arr = new ArrayList<>();
             int sum = 0;
@@ -404,14 +404,14 @@ public class Orderbook {
                 sum += ptr.getCurrentQuantity();
                 ptr = ptr.getNextOrder();
             }
-            logger.info(arr);
-            logger.info("total: {}", sum);
+            logger.debug(arr);
+            logger.debug("total: {}", sum);
         }
 
-        logger.info("ASK LIMITS");
+        logger.debug("ASK LIMITS");
         for (Limit limit: askLimits)
         {
-            logger.info(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
+            logger.debug(limit + ", " + "totalVolumeAtLimit: " + limit.getTotalVolumeAtLimit());
             Order ptr = limit.getHead();
             ArrayList<String> arr = new ArrayList<>();
             int sum = 0;
@@ -422,11 +422,11 @@ public class Orderbook {
                 sum += ptr.getCurrentQuantity();
                 ptr = ptr.getNextOrder();
             }
-            logger.info(arr);
-            logger.info("total: {}", sum);
+            logger.debug(arr);
+            logger.debug("total: {}", sum);
         }
 
-        logger.info("\n####\n");
+        logger.debug("\n####\n");
     }
 
     public void printOrderbook()
@@ -463,8 +463,8 @@ public class Orderbook {
         Limit bestBidLimit = treeSetTryGetValue(bidLimits, new Limit(bestBid));
         Limit bestAskLimit = treeSetTryGetValue(askLimits, new Limit(bestAsk));
         if (bestBidLimit != null && bestAskLimit != null)
-            logger.info("BBO: {} x {}/{} x {}", bestBidLimit.getTotalVolumeAtLimit(), bestBid, bestAsk, bestAskLimit.getTotalVolumeAtLimit());
-        logger.info("totalBidSize: {}, totalAskSize: {}", totalBidSize, totalAskSize);
+            logger.debug("BBO: {} x {}/{} x {}", bestBidLimit.getTotalVolumeAtLimit(), bestBid, bestAsk, bestAskLimit.getTotalVolumeAtLimit());
+        logger.debug("totalBidSize: {}, totalAskSize: {}", totalBidSize, totalAskSize);
     }
 
     public boolean compareTotalBidAskVolumes()

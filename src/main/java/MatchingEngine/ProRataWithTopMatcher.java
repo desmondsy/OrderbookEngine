@@ -26,11 +26,11 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
         int initialQty = o.getCurrentQuantity();
         int filledQty = 0;
 
-        logger.info("order qty: {}, filled qty: {}/{}", initialQty, filledQty, initialQty);
+        logger.debug("order qty: {}, filled qty: {}/{}", initialQty, filledQty, initialQty);
 
         for (Limit limit: limitTree)
         {
-            logger.info("iterating through resting orders at limit={}...", limit.getPrice());
+            logger.debug("iterating through resting orders at limit={}...", limit.getPrice());
             Order ptr = limit.getHead();
             Order headOrder = limit.getHead();
             int remainingQty = o.getCurrentQuantity();
@@ -40,12 +40,12 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
             {
                 if (ptr == headOrder) // top
                 {
-                    logger.info("attempting to match entire top order. orderID: {}, price: {}, qty: {}", ptr.getOrderId(), ptr.getPrice(), ptr.getCurrentQuantity());
+                    logger.debug("attempting to match entire top order. orderID: {}, price: {}, qty: {}", ptr.getOrderId(), ptr.getPrice(), ptr.getCurrentQuantity());
                     int topOrderRemainingQty = Math.max(ptr.getCurrentQuantity() - o.getCurrentQuantity(), 0);
                     if (topOrderRemainingQty == 0) {
                         Trade trade = new Trade(o.getSide(), limit.getPrice(), ptr.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId());
                         trades.add(trade);
-                        logger.info("new trade: {}", trade);
+                        logger.debug("new trade: {}", trade);
 
                         o.setCurrentQuantity(o.getCurrentQuantity() - ptr.getCurrentQuantity());
                         filledQty += ptr.getCurrentQuantity();
@@ -54,8 +54,8 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                         // top order fully fills the incoming order, update book, exit while loop (matching finished)
                         Trade trade = new Trade(o.getSide(), limit.getPrice(), o.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId());
                         trades.add(trade);
-                        logger.info("new trade: {}", trade);
-                        logger.info("top order fully fills incoming order. Matching complete.");
+                        logger.debug("new trade: {}", trade);
+                        logger.debug("top order fully fills incoming order. Matching complete.");
 
                         limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - o.getCurrentQuantity());
                         if (o.isBuy())
@@ -70,20 +70,20 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
 
                     modifiedTotalVolumeAtLimit = limit.getTotalVolumeAtLimit();
                     remainingQty = o.getCurrentQuantity();
-                    logger.info("after matching top order - filledQty: {}/{}, totalVolumeAtLimit: {}, unfilledQty: {}", filledQty, initialQty, modifiedTotalVolumeAtLimit, o.getCurrentQuantity());
+                    logger.debug("after matching top order - filledQty: {}/{}, totalVolumeAtLimit: {}, unfilledQty: {}", filledQty, initialQty, modifiedTotalVolumeAtLimit, o.getCurrentQuantity());
                 }
                 else
                 {
                     // pro rata
-                    logger.info("Top order was fully filled. Continuing with pro rata matching for remaining qty...");
+                    logger.debug("Top order was fully filled. Continuing with pro rata matching for remaining qty...");
                     double ratio = (double) ptr.getCurrentQuantity() / modifiedTotalVolumeAtLimit;
                     int qtyToFill = Math.min(ptr.getCurrentQuantity(), (int) (ratio * remainingQty));
-                    logger.info("Matching with orderID {}, qty: {}, ratio: ({}/{}) = {}, toDistribute: {}, qtyToFill: {}, canDistribute: {}",
+                    logger.debug("Matching with orderID {}, qty: {}, ratio: ({}/{}) = {}, toDistribute: {}, qtyToFill: {}, canDistribute: {}",
                             ptr.getOrderId(), ptr.getCurrentQuantity(), ptr.getCurrentQuantity(), modifiedTotalVolumeAtLimit, ratio, remainingQty, qtyToFill, qtyToFill > 0);
 
                     Trade trade = new Trade(o.getSide(), limit.getPrice(), qtyToFill, ptr.getOrderId(), o.getOrderId());
                     trades.add(trade);
-                    logger.info("new trade: {}", trade);
+                    logger.debug("new trade: {}", trade);
 
                     if (qtyToFill > 0)
                     {
@@ -103,13 +103,13 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
 
                         filledQty += qtyToFill;
                         o.setCurrentQuantity(Math.max(0, initialQty - filledQty));
-                        logger.info("filledQty: {}/{}", filledQty, initialQty);
+                        logger.debug("filledQty: {}/{}", filledQty, initialQty);
                     }
                 }
                 ptr = ptr.getNextOrder();
             }
 
-            logger.info("at the current limit price level = {} - the available liquidity was: {}, we filled: {}, unfilledQty: {}",
+            logger.debug("at the current limit price level = {} - the available liquidity was: {}, we filled: {}, unfilledQty: {}",
                     limit.getPrice(), modifiedTotalVolumeAtLimit, filledQty, o.getCurrentQuantity());
 
             if (o.getCurrentQuantity() > 0 && filledQty != modifiedTotalVolumeAtLimit)
@@ -118,7 +118,7 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                 // (time priority) matching for the 'roundoff' quantity.
                 // If the limit was fully depleted without any residue, filledQty == totalVolumeAtLimit, and we don't have to do this FIFO residue distribution.
 
-                logger.info("there is a rounding residue of {} as a result of the pro rata distribution. Match residue qty with FIFO, iterating through the existing limit level again...",
+                logger.debug("there is a rounding residue of {} as a result of the pro rata distribution. Match residue qty with FIFO, iterating through the existing limit level again...",
                         modifiedTotalVolumeAtLimit - filledQty);
 
                 ptr = limit.getHead();
@@ -128,14 +128,14 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                     // clears the entire current limit order and we have to move to the next limit order with ptr.
                     int canAllocate = ptr.getCurrentQuantity();
                     int allocated = Math.min(o.getCurrentQuantity(), canAllocate);
-                    logger.info("Matching residue qty of {} with orderID {} (price: {}, qty: {}/{}), unfilled qty: {}. We can allocate a maximum of {} lots.",
+                    logger.debug("Matching residue qty of {} with orderID {} (price: {}, qty: {}/{}), unfilled qty: {}. We can allocate a maximum of {} lots.",
                             modifiedTotalVolumeAtLimit - filledQty, ptr.getOrderId(), ptr.getPrice(), canAllocate, ptr.getInitialQuantity(), o.getCurrentQuantity(), allocated);
 
                     if (allocated > 0)
                     {
                         Trade trade = new Trade(o.getSide(), limit.getPrice(), allocated, ptr.getOrderId(), o.getOrderId());
                         trades.add(trade);
-                        logger.info("new trade: {}", trade);
+                        logger.debug("new trade: {}", trade);
 
                         // if howMuchLeftToFill reaches 0, the pro rata residue volume has been fully distributed, we can exit the while loop.
                         int howMuchLeftToFill = o.getCurrentQuantity() - allocated;
@@ -172,12 +172,12 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
             if (o.getCurrentQuantity() == 0)
             {
                 // order is fully filled
-                logger.info("orderID: {} - fully filled.", o.getOrderId());
+                logger.debug("orderID: {} - fully filled.", o.getOrderId());
                 break;
             }
 
             // If limit is depleted and there is still unfilled qty, we move on to the next best limit.
-            logger.info("limit price {} cleared. Order still has {} remaining qty. Continuing to next best limit...", limit.getPrice(), o.getCurrentQuantity());
+            logger.debug("limit price {} cleared. Order still has {} remaining qty. Continuing to next best limit...", limit.getPrice(), o.getCurrentQuantity());
         }
 
         ob.clearEmptyLimitsAfterMatching(o.isBuy());
@@ -206,13 +206,13 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
         int initialQty = o.getCurrentQuantity();
         int filledQty = 0;
 
-        logger.info("order qty: {}, filled qty: {}/{}", initialQty, filledQty, initialQty);
+        logger.debug("order qty: {}, filled qty: {}/{}", initialQty, filledQty, initialQty);
 
         for (Limit limit: limitTree)
         {
             if (limit.getPrice() == farTouchPrice)
             {
-                logger.info("iterating through resting orders at limit={} only...", limit.getPrice());
+                logger.debug("iterating through resting orders at limit={} only...", limit.getPrice());
                 Order ptr = limit.getHead();
                 Order headOrder = limit.getHead();
                 int remainingQty = o.getCurrentQuantity();
@@ -222,12 +222,12 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                 {
                     if (ptr == headOrder) // top
                     {
-                        logger.info("attempting to match entire top order. orderID: {}, price: {}, qty: {}", ptr.getOrderId(), ptr.getPrice(), ptr.getCurrentQuantity());
+                        logger.debug("attempting to match entire top order. orderID: {}, price: {}, qty: {}", ptr.getOrderId(), ptr.getPrice(), ptr.getCurrentQuantity());
                         int topOrderRemainingQty = Math.max(ptr.getCurrentQuantity() - o.getCurrentQuantity(), 0);
                         if (topOrderRemainingQty == 0) {
                             Trade trade = new Trade(o.getSide(), limit.getPrice(), ptr.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId());
                             trades.add(trade);
-                            logger.info("new trade: {}", trade);
+                            logger.debug("new trade: {}", trade);
 
                             o.setCurrentQuantity(o.getCurrentQuantity() - ptr.getCurrentQuantity());
                             filledQty += ptr.getCurrentQuantity();
@@ -236,8 +236,8 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                             // top order fully fills the incoming order, update book, exit while loop (matching finished)
                             Trade trade = new Trade(o.getSide(), limit.getPrice(), o.getCurrentQuantity(), ptr.getOrderId(), o.getOrderId());
                             trades.add(trade);
-                            logger.info("new trade: {}", trade);
-                            logger.info("top order fully fills incoming order. Matching complete.");
+                            logger.debug("new trade: {}", trade);
+                            logger.debug("top order fully fills incoming order. Matching complete.");
 
                             limit.setTotalVolumeAtLimit(limit.getTotalVolumeAtLimit() - o.getCurrentQuantity());
                             if (o.isBuy())
@@ -251,20 +251,20 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                         }
 
                         modifiedTotalVolumeAtLimit = limit.getTotalVolumeAtLimit();
-                        logger.info("after matching top order - filledQty: {}/{}, totalVolumeAtLimit: {}, unfilledQty: {}", filledQty, initialQty, modifiedTotalVolumeAtLimit, o.getCurrentQuantity());
+                        logger.debug("after matching top order - filledQty: {}/{}, totalVolumeAtLimit: {}, unfilledQty: {}", filledQty, initialQty, modifiedTotalVolumeAtLimit, o.getCurrentQuantity());
                     }
                     else
                     {
                         // pro rata
-                        logger.info("Top order was fully filled. Continuing with pro rata matching for remaining qty...");
+                        logger.debug("Top order was fully filled. Continuing with pro rata matching for remaining qty...");
                         double ratio = (double) ptr.getCurrentQuantity() / modifiedTotalVolumeAtLimit;
                         int qtyToFill = Math.min(ptr.getCurrentQuantity(), (int) (ratio * remainingQty));
-                        logger.info("Matching with orderID {}, qty: {}, ratio: ({}/{}) = {}, toDistribute: {}, qtyToFill: {}, canDistribute: {}",
+                        logger.debug("Matching with orderID {}, qty: {}, ratio: ({}/{}) = {}, toDistribute: {}, qtyToFill: {}, canDistribute: {}",
                                 ptr.getOrderId(), ptr.getCurrentQuantity(), ptr.getCurrentQuantity(), modifiedTotalVolumeAtLimit, ratio, remainingQty, qtyToFill, qtyToFill > 0);
 
                         Trade trade = new Trade(o.getSide(), limit.getPrice(), qtyToFill, ptr.getOrderId(), o.getOrderId());
                         trades.add(trade);
-                        logger.info("new trade: {}", trade);
+                        logger.debug("new trade: {}", trade);
 
                         if (qtyToFill > 0)
                         {
@@ -284,13 +284,13 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
 
                             filledQty += qtyToFill;
                             o.setCurrentQuantity(Math.max(0, initialQty - filledQty));
-                            logger.info("filledQty: {}/{}", filledQty, initialQty);
+                            logger.debug("filledQty: {}/{}", filledQty, initialQty);
                         }
                     }
                     ptr = ptr.getNextOrder();
                 }
 
-                logger.info("at the current limit price level = {} - the available liquidity was: {}, we filled: {}, unfilledQty: {}",
+                logger.debug("at the current limit price level = {} - the available liquidity was: {}, we filled: {}, unfilledQty: {}",
                         limit.getPrice(), modifiedTotalVolumeAtLimit, filledQty, o.getCurrentQuantity());
 
                 if (o.getCurrentQuantity() > 0 && filledQty != modifiedTotalVolumeAtLimit)
@@ -298,7 +298,7 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                     // the limit is not depleted but there is still remainder qty from the pro rata roundoff. We apply FIFO
                     // (time priority) matching for the 'roundoff' quantity.
                     // If the limit was fully depleted without any residue, filledQty == totalVolumeAtLimit, and we don't have to do this FIFO residue distribution.
-                    logger.info("there is a rounding residue of {} as a result of the pro rata distribution. Match residue qty with FIFO, iterating through the existing limit level again...",
+                    logger.debug("there is a rounding residue of {} as a result of the pro rata distribution. Match residue qty with FIFO, iterating through the existing limit level again...",
                             modifiedTotalVolumeAtLimit - filledQty);
 
                     ptr = limit.getHead();
@@ -308,14 +308,14 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                         // clears the entire current limit order and we have to move to the next limit order with ptr.
                         int canAllocate = ptr.getCurrentQuantity();
                         int allocated = Math.min(o.getCurrentQuantity(), canAllocate);
-                        logger.info("Matching residue qty of {} with orderID {} (price: {}, qty: {}/{}), unfilled qty: {}. We can allocate a maximum of {} lots.",
+                        logger.debug("Matching residue qty of {} with orderID {} (price: {}, qty: {}/{}), unfilled qty: {}. We can allocate a maximum of {} lots.",
                                 modifiedTotalVolumeAtLimit - filledQty, ptr.getOrderId(), ptr.getPrice(), canAllocate, ptr.getInitialQuantity(), o.getCurrentQuantity(), allocated);
 
                         if (allocated > 0)
                         {
                             Trade trade = new Trade(o.getSide(), limit.getPrice(), allocated, ptr.getOrderId(), o.getOrderId());
                             trades.add(trade);
-                            logger.info("new trade: {}", trade);
+                            logger.debug("new trade: {}", trade);
 
                             // if howMuchLeftToFill reaches 0, the pro rata residue volume has been fully distributed, we can exit the while loop.
                             int howMuchLeftToFill = o.getCurrentQuantity() - allocated;
@@ -352,7 +352,7 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
                 if (o.getCurrentQuantity() == 0)
                 {
                     // order is fully filled
-                    logger.info("orderID: {} - fully filled.", o.getOrderId());
+                    logger.debug("orderID: {} - fully filled.", o.getOrderId());
                     break;
                 }
             }
@@ -363,7 +363,7 @@ class ProRataWithTopMatcher extends AbstractOrderMatcher{
 
         if (o.getCurrentQuantity() > 0)
         {
-            logger.info("aggressive limit order cleared the entire far touch qty. Creating a new limit for the remaining qty.");
+            logger.debug("aggressive limit order cleared the entire far touch qty. Creating a new limit for the remaining qty.");
             ob.addOrder(new Order(o.getSecurityId(), o.getSide(), o.getCurrentQuantity(), farTouchPrice));
         }
     }

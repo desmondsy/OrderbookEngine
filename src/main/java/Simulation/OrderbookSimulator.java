@@ -90,7 +90,7 @@ public class OrderbookSimulator {
         for (int i=0;i<ITERATIONS;i++)
         {
             Event event = pickEvent(eventProbabilitiesMap);
-            logger.info("\n");
+            logger.debug("\n");
 
             if (event == null)
             {
@@ -146,7 +146,7 @@ public class OrderbookSimulator {
         double price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
         int volume = generateVolume(true, false);
 
-        logger.info("New event: PASSIVE_BUY - creating new order with price: {}, qty: {}", price, volume);
+        logger.debug("New event: PASSIVE_BUY - creating new order with price: {}, qty: {}", price, volume);
         ob.addOrder(new Order(0, Side.BUY, volume, price));
     }
 
@@ -156,26 +156,24 @@ public class OrderbookSimulator {
         double price = ob.getBestBid() + distanceFrom * TICK_SIZE;
         int volume = generateVolume(false, false);
 
-        logger.info("New event: PASSIVE_SELL - creating new order with price: {}, qty: {}", price, volume);
+        logger.debug("New event: PASSIVE_SELL - creating new order with price: {}, qty: {}", price, volume);
         ob.addOrder(new Order(0, Side.SELL, volume, price));
     }
 
     private void processAggressiveBuy()
     {
-//        ob.printOrderbookWithOrders();
-
         int volume = generateVolume(true, true);
         if (random.nextDouble() > 0.5)
         {
             // market order
-            logger.info("New event: AGGRESSIVE_BUY (market) - volume: {}", volume);
+            logger.debug("New event: AGGRESSIVE_BUY (market) - volume: {}", volume);
             ob.addOrder(new Order(0, Side.BUY, volume, null));
         }
         else
         {
             // aggressive limit order - far touch
             double price = ob.getBestAsk();
-            logger.info("New event: AGGRESSIVE_BUY (limit) - price: {}, volume: {}", price, volume);
+            logger.debug("New event: AGGRESSIVE_BUY (limit) - price: {}, volume: {}", price, volume);
             ob.addOrder(new Order(0, Side.BUY, volume, price));
         }
     }
@@ -185,17 +183,17 @@ public class OrderbookSimulator {
 //        ob.printOrderbookWithOrders();
 
         int volume = generateVolume(false, true);
-        if (random.nextDouble() > 0)
+        if (random.nextDouble() > 0.5)
         {
             // market order
-            logger.info("New event: AGGRESSIVE_SELL (market) - volume: {}", volume);
+            logger.debug("New event: AGGRESSIVE_SELL (market) - volume: {}", volume);
             ob.addOrder(new Order(0, Side.SELL, volume, null));
         }
         else
         {
             // aggressive limit order - far touch
             double price = ob.getBestBid();
-            logger.info("New event: AGGRESSIVE_SELL (market) - price: {}, volume: {}", price, volume);
+            logger.debug("New event: AGGRESSIVE_SELL (market) - price: {}, volume: {}", price, volume);
             ob.addOrder(new Order(0, Side.SELL, volume, price));
         }
     }
@@ -205,10 +203,10 @@ public class OrderbookSimulator {
         // mod buy price or mod buy qty, 50/50 probability
         int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
         double price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
-        logger.info("New event: MOD_BUY - going to mod a random order at the {} price level.", price);
+        logger.debug("New event: MOD_BUY - going to mod a random order at the {} price level.", price);
         if (ob.getBuyOrderIds().get(price) == null || ob.getBuyOrderIds().get(price).isEmpty())
         {
-            logger.info("MOD_BUY - price level does not exist yet or there are no orders on that pricw level. Not going to mod.");
+            logger.debug("MOD_BUY - price level does not exist yet or there are no orders on that pricw level. Not going to mod.");
             return;
         }
 
@@ -219,7 +217,7 @@ public class OrderbookSimulator {
             // mod qty
             int newQty = generateRandomNumber(1, 100);
 
-            logger.info("New event: MOD_BUY - going to mod orderID: {}, qty from {} to {}",
+            logger.debug("New event: MOD_BUY - going to mod orderID: {}, qty from {} to {}",
                     buyOrderIdToMod, ob.getOrderMap().get(buyOrderIdToMod).getCurrentQuantity(), newQty);
             ob.modifyOrderQty(buyOrderIdToMod, newQty);
         }
@@ -234,10 +232,10 @@ public class OrderbookSimulator {
         // mod sell price or mod sell qty, 50/50 probability
         int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
         double price = ob.getBestBid() + distanceFrom * TICK_SIZE;
-        logger.info("New event: MOD_SELL - going to mod a random order at the {} price level.", price);
+        logger.debug("New event: MOD_SELL - going to mod a random order at the {} price level.", price);
         if (ob.getSellOrderIds().get(price) == null || ob.getSellOrderIds().get(price).isEmpty())
         {
-            logger.info("MOD_SELL - price level does not exist yet or there are no orders on that pricw level. Not going to mod.");
+            logger.debug("MOD_SELL - price level does not exist yet or there are no orders on that pricw level. Not going to mod.");
             return;
         }
 
@@ -247,7 +245,7 @@ public class OrderbookSimulator {
         {
             // mod qty
             int newQty = generateRandomNumber(1, 100);
-            logger.info("New event: MOD_SELL - going to mod orderID: {}, qty from {} to {}",
+            logger.debug("New event: MOD_SELL - going to mod orderID: {}, qty from {} to {}",
                     sellOrderIdToMod, ob.getOrderMap().get(sellOrderIdToMod).getCurrentQuantity(), newQty);
             ob.modifyOrderQty(sellOrderIdToMod, newQty);
         }
@@ -261,16 +259,16 @@ public class OrderbookSimulator {
     {
         int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
         double price = ob.getBestAsk() - distanceFrom * TICK_SIZE;
-        logger.info("New event: CANCEL_BUY - going to cancel a random order at the {} price level.", price);
+        logger.debug("New event: CANCEL_BUY - going to cancel a random order at the {} price level.", price);
 
         if (ob.getBuyOrderIds().get(price) == null || ob.getBuyOrderIds().get(price).isEmpty())
         {
-            logger.info("CANCEL_BUY - price level does not exist yet or there are no orders on that pricw level. Skipping.");
+            logger.debug("CANCEL_BUY - price level does not exist yet or there are no orders on that pricw level. Skipping.");
             return;
         }
 
         int buyOrderIdToCancel = ob.getBuyOrderIds().get(price).chooseRandomItem();
-        logger.info("CANCEL_BUY - going to cancel orderID: {}", buyOrderIdToCancel);
+        logger.debug("CANCEL_BUY - going to cancel orderID: {}", buyOrderIdToCancel);
         ob.removeOrder(buyOrderIdToCancel, false);
     }
 
@@ -278,16 +276,16 @@ public class OrderbookSimulator {
     {
         int distanceFrom = selectIndexWithProbability(decayingProbabilitiesArr);
         double price = ob.getBestBid() + distanceFrom * TICK_SIZE;
-        logger.info("New event: CANCEL_SELL - going to cancel a random order at the {} price level.", price);
+        logger.debug("New event: CANCEL_SELL - going to cancel a random order at the {} price level.", price);
 
         if (ob.getSellOrderIds().get(price) == null || ob.getSellOrderIds().get(price).isEmpty())
         {
-            logger.info("CANCEL_SELL - price level does not exist yet or there are no orders on that pricw level. Skipping.");
+            logger.debug("CANCEL_SELL - price level does not exist yet or there are no orders on that pricw level. Skipping.");
             return;
         }
 
         int sellOrderIdToCancel = ob.getSellOrderIds().get(price).chooseRandomItem();
-        logger.info("CANCEL_SELL - going to cancel orderID: {}", sellOrderIdToCancel);
+        logger.debug("CANCEL_SELL - going to cancel orderID: {}", sellOrderIdToCancel);
         ob.removeOrder(sellOrderIdToCancel, false);
     }
 
@@ -301,12 +299,12 @@ public class OrderbookSimulator {
             // for pro rata orders, we want to simulate larger order quantities in order to see the pro rata distribution effect more clearly
             if (isBuy)
             {
-                logger.info("generating prorata volume. rand: {}, bestAskVolume: {}", rand, ob.getBestAskSize());
+                logger.debug("generating prorata volume. rand: {}, bestAskVolume: {}", rand, ob.getBestAskSize());
                 return Math.max(1, (int) (rand * ob.getBestAskSize()));
             }
             else
             {
-                logger.info("generating prorata volume. rand: {}, bestBidVolume: {}", rand, ob.getBestBidSize());
+                logger.debug("generating prorata volume. rand: {}, bestBidVolume: {}", rand, ob.getBestBidSize());
                 return Math.max(1, (int) (rand * ob.getBestBidSize()));
             }
         }
@@ -371,17 +369,17 @@ public class OrderbookSimulator {
 
     private void logParameters()
     {
-        logger.info("SIMULATION PARAMETERS:");
-        logger.info("MATCHING_ENGINE: {}", MATCHING_ENGINE);
-        logger.info("EVENT_PROBABILITIES_STYLE: {}", EVENT_PROBABILITIES_STYLE);
-        logger.info("BOOK_EVENT_DEPTH: {}", BOOK_EVENT_DEPTH);
-        logger.info("INIT_ITERATIONS: {}", INIT_ITERATIONS);
-        logger.info("ITERATIONS: {}", ITERATIONS);
-        logger.info("BID_INIT: {}", BID_INIT);
-        logger.info("ASK_INIT: {}", ASK_INIT);
-        logger.info("TICK_SIZE: {}", TICK_SIZE);
-        logger.info("PRORATA_FAR_TOUCH_MIN_MULTIPLIER: {}", PRORATA_FAR_TOUCH_MIN_MULTIPLIER);
-        logger.info("PRORATA_FAR_TOUCH_MAX_MULTIPLIER: {}", PRORATA_FAR_TOUCH_MAX_MULTIPLIER);
-        logger.info("\n");
+        logger.debug("SIMULATION PARAMETERS:");
+        logger.debug("MATCHING_ENGINE: {}", MATCHING_ENGINE);
+        logger.debug("EVENT_PROBABILITIES_STYLE: {}", EVENT_PROBABILITIES_STYLE);
+        logger.debug("BOOK_EVENT_DEPTH: {}", BOOK_EVENT_DEPTH);
+        logger.debug("INIT_ITERATIONS: {}", INIT_ITERATIONS);
+        logger.debug("ITERATIONS: {}", ITERATIONS);
+        logger.debug("BID_INIT: {}", BID_INIT);
+        logger.debug("ASK_INIT: {}", ASK_INIT);
+        logger.debug("TICK_SIZE: {}", TICK_SIZE);
+        logger.debug("PRORATA_FAR_TOUCH_MIN_MULTIPLIER: {}", PRORATA_FAR_TOUCH_MIN_MULTIPLIER);
+        logger.debug("PRORATA_FAR_TOUCH_MAX_MULTIPLIER: {}", PRORATA_FAR_TOUCH_MAX_MULTIPLIER);
+        logger.debug("\n");
     }
 }
